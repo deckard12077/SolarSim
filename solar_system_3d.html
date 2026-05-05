@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>太阳系三维模拟</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #000; overflow: hidden; font-family: "Microsoft YaHei","SimHei",sans-serif; }
@@ -46,7 +49,7 @@ canvas { display: block; }
 
 <div id="panel">
   <div class="title">太阳系三维模拟</div>
-  <div><span class="key">时间流速</span><span class="val" id="speedVal">1 天/秒</span></div>
+  <div><span class="key">时间流速</span><span class="val" id="speedVal">10 天/秒</span></div>
   <div><span class="key">已过天数</span><span class="val" id="daysVal">0</span></div>
   <div class="sep">─────────────</div>
   <div>
@@ -64,7 +67,8 @@ canvas { display: block; }
   <div><span class="key">左键拖拽</span> 旋转</div>
   <div><span class="key">右键拖拽</span> 平移</div>
   <div><span class="key">滚轮</span> 缩放</div>
-  <div><span class="key">空格</span> 暂停/继续</div>
+  <div><span class="key">空格</span> 重置视角</div>
+  <div><span class="key">P</span> 暂停/继续</div>
   <div><span class="key">点击行星</span> 聚焦</div>
 </div>
 
@@ -105,67 +109,75 @@ const MS_PER_DAY = 86400000;
 
 const PLANET_DATA = [
   {
-    name: '水星', radius: 0.35, orbitRadius: 10, orbitDays: 87.97,
-    rotationHours: 1407.6, axialTilt: 0.034, color: 0xaaaaaa,
+    // 真实轨道半径比例: 0.387 AU → 缩放到 8
+    name: '水星', radius: 0.9, orbitRadius: 8, orbitDays: 87.97,
+    rotationHours: 1407.6, axialTilt: 0.034, color: 0x8c7e6d,
     phaseOffsetDeg: 252.25, moons: []
   },
   {
-    name: '金星', radius: 0.6, orbitRadius: 15, orbitDays: 224.7,
-    rotationHours: -5832.5, axialTilt: 177.4, color: 0xe8c060,
+    // 0.723 AU → 15
+    name: '金星', radius: 1.5, orbitRadius: 15, orbitDays: 224.7,
+    rotationHours: -5832.5, axialTilt: 177.4, color: 0xe8c56d,
     phaseOffsetDeg: 181.98, moons: []
   },
   {
-    name: '地球', radius: 0.65, orbitRadius: 20, orbitDays: 365.25,
-    rotationHours: 23.93, axialTilt: 23.44, color: 0x4488dd,
+    // 1.0 AU → 20 (基准)
+    name: '地球', radius: 1.6, orbitRadius: 20, orbitDays: 365.25,
+    rotationHours: 23.93, axialTilt: 23.44, color: 0x3399ee,
     phaseOffsetDeg: 100.46,
     moons: [
-      { name: '月球', radius: 0.15, orbitRadius: 1.6, orbitDays: 27.32, color: 0xcccccc, phaseOffsetDeg: 0 }
+      { name: '月球', radius: 0.35, orbitRadius: 2.8, orbitDays: 27.32, color: 0xaaaaaa, phaseOffsetDeg: 0 }
     ]
   },
   {
-    name: '火星', radius: 0.45, orbitRadius: 28, orbitDays: 687.0,
+    // 1.524 AU → 30
+    name: '火星', radius: 1.1, orbitRadius: 30, orbitDays: 687.0,
     rotationHours: 24.62, axialTilt: 25.19, color: 0xcc4422,
     phaseOffsetDeg: 355.45,
     moons: [
-      { name: '火卫一', radius: 0.06, orbitRadius: 1.1, orbitDays: 0.319, color: 0x998877, phaseOffsetDeg: 0 },
-      { name: '火卫二', radius: 0.04, orbitRadius: 1.5, orbitDays: 1.263, color: 0x887766, phaseOffsetDeg: 90 }
+      { name: '火卫一', radius: 0.15, orbitRadius: 2.0, orbitDays: 0.319, color: 0x998877, phaseOffsetDeg: 0 },
+      { name: '火卫二', radius: 0.12, orbitRadius: 2.8, orbitDays: 1.263, color: 0x887766, phaseOffsetDeg: 90 }
     ]
   },
   {
-    name: '木星', radius: 2.0, orbitRadius: 48, orbitDays: 4332.6,
-    rotationHours: 9.93, axialTilt: 3.13, color: 0xd4a86a,
+    // 5.203 AU → 52 (稍压缩外行星间距)
+    name: '木星', radius: 4.5, orbitRadius: 52, orbitDays: 4332.6,
+    rotationHours: 9.93, axialTilt: 3.13, color: 0xc8a55a,
     phaseOffsetDeg: 34.40,
     moons: [
-      { name: '木卫一', radius: 0.14, orbitRadius: 3.2, orbitDays: 1.769, color: 0xddcc44, phaseOffsetDeg: 0 },
-      { name: '木卫二', radius: 0.12, orbitRadius: 3.9, orbitDays: 3.551, color: 0xaabbcc, phaseOffsetDeg: 60 },
-      { name: '木卫三', radius: 0.18, orbitRadius: 4.8, orbitDays: 7.155, color: 0x998877, phaseOffsetDeg: 120 },
-      { name: '木卫四', radius: 0.16, orbitRadius: 5.8, orbitDays: 16.689, color: 0x776655, phaseOffsetDeg: 200 }
+      { name: '木卫一', radius: 0.3, orbitRadius: 6.5, orbitDays: 1.769, color: 0xeecc33, phaseOffsetDeg: 0 },
+      { name: '木卫二', radius: 0.26, orbitRadius: 7.8, orbitDays: 3.551, color: 0xaabbcc, phaseOffsetDeg: 60 },
+      { name: '木卫三', radius: 0.38, orbitRadius: 9.2, orbitDays: 7.155, color: 0x998877, phaseOffsetDeg: 120 },
+      { name: '木卫四', radius: 0.34, orbitRadius: 11.0, orbitDays: 16.689, color: 0x776655, phaseOffsetDeg: 200 }
     ]
   },
   {
-    name: '土星', radius: 1.7, orbitRadius: 68, orbitDays: 10759,
-    rotationHours: 10.66, axialTilt: 26.73, color: 0xe8d080,
+    // 9.537 AU → 72
+    name: '土星', radius: 3.8, orbitRadius: 72, orbitDays: 10759,
+    rotationHours: 10.66, axialTilt: 26.73, color: 0xd4b86a,
     phaseOffsetDeg: 49.94,
-    ring: { inner: 2.2, outer: 4.0, color: 0xc8b88080 },
+    ring: { inner: 5.0, outer: 8.5, color: 0xc8b88080 },
     moons: [
-      { name: '土卫六', radius: 0.18, orbitRadius: 4.8, orbitDays: 15.945, color: 0xddaa55, phaseOffsetDeg: 0 }
+      { name: '土卫六', radius: 0.38, orbitRadius: 9.5, orbitDays: 15.945, color: 0xddaa55, phaseOffsetDeg: 0 }
     ]
   },
   {
-    name: '天王星', radius: 1.1, orbitRadius: 90, orbitDays: 30687,
-    rotationHours: -17.24, axialTilt: 97.77, color: 0x66cccc,
+    // 19.19 AU → 100
+    name: '天王星', radius: 2.6, orbitRadius: 100, orbitDays: 30687,
+    rotationHours: -17.24, axialTilt: 97.77, color: 0x55cccc,
     phaseOffsetDeg: 313.23,
-    ring: { inner: 1.5, outer: 2.0, color: 0x88aaaa60 },
+    ring: { inner: 3.5, outer: 4.8, color: 0x88aaaa60 },
     moons: [
-      { name: '天卫三', radius: 0.08, orbitRadius: 2.2, orbitDays: 8.706, color: 0x99aabb, phaseOffsetDeg: 0 }
+      { name: '天卫三', radius: 0.18, orbitRadius: 4.5, orbitDays: 8.706, color: 0x99aabb, phaseOffsetDeg: 0 }
     ]
   },
   {
-    name: '海王星', radius: 1.05, orbitRadius: 115, orbitDays: 60190,
-    rotationHours: 16.11, axialTilt: 28.32, color: 0x3355cc,
+    // 30.07 AU → 130
+    name: '海王星', radius: 2.5, orbitRadius: 130, orbitDays: 60190,
+    rotationHours: 16.11, axialTilt: 28.32, color: 0x3355ee,
     phaseOffsetDeg: 304.88,
     moons: [
-      { name: '海卫一', radius: 0.1, orbitRadius: 2.2, orbitDays: -5.877, color: 0x99aaaa, phaseOffsetDeg: 0 }
+      { name: '海卫一', radius: 0.22, orbitRadius: 4.5, orbitDays: -5.877, color: 0x99aaaa, phaseOffsetDeg: 0 }
     ]
   }
 ];
@@ -196,7 +208,7 @@ if (!renderer.capabilities.isWebGL2) {
 }
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 5000);
-camera.position.set(40, 60, 80);
+camera.position.set(50, 70, 100);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -221,24 +233,19 @@ function createSun() {
   const geo = new THREE.SphereGeometry(4, 48, 48);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
   const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = 0;
   group.add(mesh);
 
-  // 内光晕
-  const glowGeo = new THREE.SphereGeometry(4.8, 32, 32);
-  const glowMat = new THREE.MeshBasicMaterial({
-    color: 0xffaa22, transparent: true, opacity: 0.2,
-    side: THREE.BackSide
-  });
-  group.add(new THREE.Mesh(glowGeo, glowMat));
-
-  // 外光晕 sprite
+  // 外光晕 sprite（仅用 sprite 实现光晕，避免深度冲突）
   const spriteTex = createGlowTexture();
   const spriteMat = new THREE.SpriteMaterial({
     map: spriteTex, color: 0xffcc44,
-    transparent: true, blending: THREE.AdditiveBlending, opacity: 0.6
+    transparent: true, blending: THREE.AdditiveBlending, opacity: 0.5,
+    depthWrite: false
   });
   const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(22, 22, 1);
+  sprite.scale.set(24, 24, 1);
+  sprite.renderOrder = -1;
   group.add(sprite);
 
   scene.add(group);
@@ -304,7 +311,7 @@ function createStarField() {
 }
 
 // ==================== 轨道线 ====================
-function createOrbitLine(radius, color = 0x334466) {
+function createOrbitLine(radius, color = 0x4466aa) {
   const segments = 128;
   const points = [];
   for (let i = 0; i <= segments; i++) {
@@ -314,7 +321,7 @@ function createOrbitLine(radius, color = 0x334466) {
     ));
   }
   const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 });
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 });
   return new THREE.Line(geo, mat);
 }
 
@@ -394,7 +401,7 @@ function createPlanet(data) {
     moonOrbitGroup.add(moonMesh);
 
     // 卫星轨道线
-    const moonOrbitLine = createOrbitLine(mData.orbitRadius, 0x222244);
+    const moonOrbitLine = createOrbitLine(mData.orbitRadius, 0x335588);
     bodyGroup.add(moonOrbitLine);
 
     bodyGroup.add(moonOrbitGroup);
@@ -418,31 +425,10 @@ for (const pData of PLANET_DATA) {
   planetObjects.push(createPlanet(pData));
 }
 
-// ==================== 标签 ====================
-function createLabel(text) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  ctx.font = '28px "Microsoft YaHei","SimHei",sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(text, 128, 40);
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.75, depthTest: false });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(5, 1.25, 1);
-  return sprite;
-}
-
-for (const p of planetObjects) {
-  const label = createLabel(p.data.name);
-  p.bodyGroup.add(label);
-  label.position.y = p.data.radius + 1.2;
-  p.label = label;
-}
+// ==================== 标签（已移除固定名称显示，仅悬停 tooltip） ====================
 
 // ==================== 动画状态 ====================
-let timeSpeed = 1.0; // 天/秒
+let timeSpeed = 10.0; // 天/秒
 let paused = false;
 let elapsedDays = 0;
 const clock = new THREE.Clock();
@@ -453,6 +439,13 @@ const mouse = new THREE.Vector2(-999, -999);
 let hoveredPlanet = null;
 let focusedPlanet = null;
 let focusTransition = 0; // 0=未聚焦, >0 正在过渡
+
+// 重置视角平滑过渡
+let resetTransition = 0; // 0=未重置, >0 正在过渡
+let resetStartCamPos = null;
+let resetStartTarget = null;
+const DEFAULT_CAM_POS = new THREE.Vector3(50, 70, 100);
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
 renderer.domElement.addEventListener('mousemove', e => {
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -469,6 +462,7 @@ renderer.domElement.addEventListener('click', e => {
     if (p) {
       focusedPlanet = p;
       focusTransition = 0;
+      resetTransition = 0;
     }
   } else {
     // 点击空白取消聚焦
@@ -487,7 +481,8 @@ document.getElementById('btnS2').addEventListener('click', () => { timeSpeed = 1
 document.getElementById('btnS3').addEventListener('click', () => { timeSpeed = 365; });
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+  if (e.code === 'Space') { e.preventDefault(); resetView(); }
+  else if (e.code === 'KeyP') togglePause();
   else if (e.code === 'ArrowUp') adjustSpeed(1);
   else if (e.code === 'ArrowDown') adjustSpeed(-1);
   else if (e.key === '1') timeSpeed = 1;
@@ -513,14 +508,16 @@ function adjustSpeed(dir) {
 }
 
 function resetView() {
-  camera.position.set(40, 60, 80);
-  controls.target.set(0, 0, 0);
-  timeSpeed = 1;
+  timeSpeed = 10;
   paused = false;
   elapsedDays = 0;
   focusedPlanet = null;
   focusTransition = 0;
   document.getElementById('btnPause').textContent = '暂停';
+  // 启动平滑过渡
+  resetStartCamPos = camera.position.clone();
+  resetStartTarget = controls.target.clone();
+  resetTransition = 0.001;
 }
 
 // ==================== 窗口 resize ====================
@@ -589,17 +586,23 @@ function animate() {
     tip.style.display = 'none';
   }
 
-  // 标签始终面向相机（sprite 自动面向）
-  // 根据距离调整标签透明度
-  for (const p of planetObjects) {
-    if (p.label) {
-      const dist = camera.position.distanceTo(p.worldPos);
-      p.label.material.opacity = dist < 150 ? 0.75 : 0.35;
+  // 重置视角平滑过渡（与聚焦行星一致的追逐式 lerp）
+  if (resetTransition > 0) {
+    const dist = camera.position.distanceTo(DEFAULT_CAM_POS);
+    const tDist = controls.target.distanceTo(DEFAULT_TARGET);
+    // 足够接近时停止
+    if (dist < 0.5 && tDist < 0.5) {
+      camera.position.copy(DEFAULT_CAM_POS);
+      controls.target.copy(DEFAULT_TARGET);
+      resetTransition = 0;
+    } else {
+      camera.position.lerp(DEFAULT_CAM_POS, 0.04);
+      controls.target.lerp(DEFAULT_TARGET, 0.04);
     }
   }
 
   // 聚焦动画
-  if (focusedPlanet) {
+  if (focusedPlanet && resetTransition === 0) {
     focusTransition = Math.min(1, focusTransition + dt * 2);
     const t = focusTransition;
     const smooth = t * t * (3 - 2 * t); // smoothstep
