@@ -64,7 +64,8 @@ canvas { display: block; }
   <div><span class="key">左键拖拽</span> 旋转</div>
   <div><span class="key">右键拖拽</span> 平移</div>
   <div><span class="key">滚轮</span> 缩放</div>
-  <div><span class="key">空格</span> 暂停/继续</div>
+  <div><span class="key">空格</span> 重置视角</div>
+  <div><span class="key">P</span> 暂停/继续</div>
   <div><span class="key">点击行星</span> 聚焦</div>
 </div>
 
@@ -106,20 +107,20 @@ const MS_PER_DAY = 86400000;
 const PLANET_DATA = [
   {
     name: '水星', radius: 0.9, orbitRadius: 10, orbitDays: 87.97,
-    rotationHours: 1407.6, axialTilt: 0.034, color: 0xaaaaaa,
+    rotationHours: 1407.6, axialTilt: 0.034, color: 0x8c7e6d,
     phaseOffsetDeg: 252.25, moons: []
   },
   {
     name: '金星', radius: 1.5, orbitRadius: 15, orbitDays: 224.7,
-    rotationHours: -5832.5, axialTilt: 177.4, color: 0xe8c060,
+    rotationHours: -5832.5, axialTilt: 177.4, color: 0xe8c56d,
     phaseOffsetDeg: 181.98, moons: []
   },
   {
     name: '地球', radius: 1.6, orbitRadius: 20, orbitDays: 365.25,
-    rotationHours: 23.93, axialTilt: 23.44, color: 0x4488dd,
+    rotationHours: 23.93, axialTilt: 23.44, color: 0x2266cc,
     phaseOffsetDeg: 100.46,
     moons: [
-      { name: '月球', radius: 0.35, orbitRadius: 2.8, orbitDays: 27.32, color: 0xcccccc, phaseOffsetDeg: 0 }
+      { name: '月球', radius: 0.35, orbitRadius: 2.8, orbitDays: 27.32, color: 0xaaaaaa, phaseOffsetDeg: 0 }
     ]
   },
   {
@@ -133,10 +134,10 @@ const PLANET_DATA = [
   },
   {
     name: '木星', radius: 4.5, orbitRadius: 48, orbitDays: 4332.6,
-    rotationHours: 9.93, axialTilt: 3.13, color: 0xd4a86a,
+    rotationHours: 9.93, axialTilt: 3.13, color: 0xc8a55a,
     phaseOffsetDeg: 34.40,
     moons: [
-      { name: '木卫一', radius: 0.3, orbitRadius: 6.5, orbitDays: 1.769, color: 0xddcc44, phaseOffsetDeg: 0 },
+      { name: '木卫一', radius: 0.3, orbitRadius: 6.5, orbitDays: 1.769, color: 0xeecc33, phaseOffsetDeg: 0 },
       { name: '木卫二', radius: 0.26, orbitRadius: 7.8, orbitDays: 3.551, color: 0xaabbcc, phaseOffsetDeg: 60 },
       { name: '木卫三', radius: 0.38, orbitRadius: 9.2, orbitDays: 7.155, color: 0x998877, phaseOffsetDeg: 120 },
       { name: '木卫四', radius: 0.34, orbitRadius: 11.0, orbitDays: 16.689, color: 0x776655, phaseOffsetDeg: 200 }
@@ -144,7 +145,7 @@ const PLANET_DATA = [
   },
   {
     name: '土星', radius: 3.8, orbitRadius: 68, orbitDays: 10759,
-    rotationHours: 10.66, axialTilt: 26.73, color: 0xe8d080,
+    rotationHours: 10.66, axialTilt: 26.73, color: 0xd4b86a,
     phaseOffsetDeg: 49.94,
     ring: { inner: 5.0, outer: 8.5, color: 0xc8b88080 },
     moons: [
@@ -153,7 +154,7 @@ const PLANET_DATA = [
   },
   {
     name: '天王星', radius: 2.6, orbitRadius: 90, orbitDays: 30687,
-    rotationHours: -17.24, axialTilt: 97.77, color: 0x66cccc,
+    rotationHours: -17.24, axialTilt: 97.77, color: 0x55cccc,
     phaseOffsetDeg: 313.23,
     ring: { inner: 3.5, outer: 4.8, color: 0x88aaaa60 },
     moons: [
@@ -162,7 +163,7 @@ const PLANET_DATA = [
   },
   {
     name: '海王星', radius: 2.5, orbitRadius: 115, orbitDays: 60190,
-    rotationHours: 16.11, axialTilt: 28.32, color: 0x3355cc,
+    rotationHours: 16.11, axialTilt: 28.32, color: 0x3355ee,
     phaseOffsetDeg: 304.88,
     moons: [
       { name: '海卫一', radius: 0.22, orbitRadius: 4.5, orbitDays: -5.877, color: 0x99aaaa, phaseOffsetDeg: 0 }
@@ -461,7 +462,8 @@ document.getElementById('btnS2').addEventListener('click', () => { timeSpeed = 1
 document.getElementById('btnS3').addEventListener('click', () => { timeSpeed = 365; });
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+  if (e.code === 'Space') { e.preventDefault(); resetView(); }
+  else if (e.code === 'KeyP') togglePause();
   else if (e.code === 'ArrowUp') adjustSpeed(1);
   else if (e.code === 'ArrowDown') adjustSpeed(-1);
   else if (e.key === '1') timeSpeed = 1;
