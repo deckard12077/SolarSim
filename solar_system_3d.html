@@ -1374,20 +1374,24 @@ function animate() {
     }
   }
 
-  // 聚焦动画
+  // 聚焦行星: 持续让 controls.target 跟随行星，相机位置由用户自由控制
   if (focusedPlanet && resetTransition === 0) {
     focusTransition = Math.min(1, focusTransition + dt * 2);
-    const t = focusTransition;
-    const smooth = t * t * (3 - 2 * t); // smoothstep
     const targetPos = focusedPlanet.worldPos.clone();
-    const offset = new THREE.Vector3(
-      focusedPlanet.data.radius * 5,
-      focusedPlanet.data.radius * 3,
-      focusedPlanet.data.radius * 5
-    );
-    const camTarget = targetPos.clone().add(offset);
-    camera.position.lerp(camTarget, smooth * 0.05);
-    controls.target.lerp(targetPos, smooth * 0.05);
+    if (focusTransition < 1) {
+      // 过渡阶段: 同时移动相机和target到行星附近
+      const t = focusTransition;
+      const smooth = t * t * (3 - 2 * t);
+      const offset = new THREE.Vector3(
+        focusedPlanet.data.radius * 5,
+        focusedPlanet.data.radius * 3,
+        focusedPlanet.data.radius * 5
+      );
+      const camTarget = targetPos.clone().add(offset);
+      camera.position.lerp(camTarget, smooth * 0.05);
+    }
+    // 始终让target跟随行星(用户旋转/缩放时视角中心不丢失)
+    controls.target.lerp(targetPos, 0.1);
   }
 
   // UI 更新
