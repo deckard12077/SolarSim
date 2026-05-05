@@ -118,22 +118,25 @@ if (!testGL) {
 const J2000 = new Date('2000-01-01T12:00:00Z').getTime();
 const MS_PER_DAY = 86400000;
 
+// 真实轨道距离(AU)和显示用参数
+// auDistance: 真实半长轴(AU)
+// orbitRadius: 默认sqrt缩放显示半径(场景单位)
+// voyagerRadius: 旅行者模式下线性比例的显示半径(场景单位, 1AU=5)
+const AU = 5; // 旅行者模式: 1 AU = 5 场景单位
+
 const PLANET_DATA = [
   {
-    // 真实轨道半径: sqrt(AU) * 32 缩放
-    name: '水星', radius: 0.9, orbitRadius: 20, orbitDays: 87.97,
+    name: '水星', auDistance: 0.387, radius: 0.9, orbitRadius: 20, orbitDays: 87.97,
     rotationHours: 1407.6, axialTilt: 0.034, color: 0xb8a88e,
     phaseOffsetDeg: 252.25, moons: []
   },
   {
-    // 0.723 AU → sqrt(0.723)*32 = 27
-    name: '金星', radius: 1.5, orbitRadius: 27, orbitDays: 224.7,
+    name: '金星', auDistance: 0.723, radius: 1.5, orbitRadius: 27, orbitDays: 224.7,
     rotationHours: -5832.5, axialTilt: 177.4, color: 0xf5da7a,
     phaseOffsetDeg: 181.98, moons: []
   },
   {
-    // 1.0 AU → sqrt(1.0)*32 = 32 (基准)
-    name: '地球', radius: 1.6, orbitRadius: 32, orbitDays: 365.25,
+    name: '地球', auDistance: 1.0, radius: 1.6, orbitRadius: 32, orbitDays: 365.25,
     rotationHours: 23.93, axialTilt: 23.44, color: 0x55bbff,
     phaseOffsetDeg: 100.46,
     moons: [
@@ -141,8 +144,7 @@ const PLANET_DATA = [
     ]
   },
   {
-    // 1.524 AU → sqrt(1.524)*32 = 40
-    name: '火星', radius: 1.1, orbitRadius: 40, orbitDays: 687.0,
+    name: '火星', auDistance: 1.524, radius: 1.1, orbitRadius: 40, orbitDays: 687.0,
     rotationHours: 24.62, axialTilt: 25.19, color: 0xee6633,
     phaseOffsetDeg: 355.45,
     moons: [
@@ -151,8 +153,7 @@ const PLANET_DATA = [
     ]
   },
   {
-    // 5.203 AU → sqrt(5.203)*32 = 73
-    name: '木星', radius: 4.5, orbitRadius: 73, orbitDays: 4332.6,
+    name: '木星', auDistance: 5.203, radius: 4.5, orbitRadius: 73, orbitDays: 4332.6,
     rotationHours: 9.93, axialTilt: 3.13, color: 0xe0c070,
     phaseOffsetDeg: 34.40,
     moons: [
@@ -163,8 +164,7 @@ const PLANET_DATA = [
     ]
   },
   {
-    // 9.537 AU → sqrt(9.537)*32 = 99
-    name: '土星', radius: 3.8, orbitRadius: 99, orbitDays: 10759,
+    name: '土星', auDistance: 9.537, radius: 3.8, orbitRadius: 99, orbitDays: 10759,
     rotationHours: 10.66, axialTilt: 26.73, color: 0xecc87a,
     phaseOffsetDeg: 49.94,
     ring: { inner: 5.0, outer: 8.5, color: 0xc8b88080 },
@@ -173,8 +173,7 @@ const PLANET_DATA = [
     ]
   },
   {
-    // 19.19 AU → sqrt(19.19)*32 = 140
-    name: '天王星', radius: 2.6, orbitRadius: 140, orbitDays: 30687,
+    name: '天王星', auDistance: 19.19, radius: 2.6, orbitRadius: 140, orbitDays: 30687,
     rotationHours: -17.24, axialTilt: 97.77, color: 0x77eeee,
     phaseOffsetDeg: 313.23,
     ring: { inner: 3.5, outer: 4.8, color: 0x88aaaa60 },
@@ -183,8 +182,7 @@ const PLANET_DATA = [
     ]
   },
   {
-    // 30.07 AU → sqrt(30.07)*32 = 176
-    name: '海王星', radius: 2.5, orbitRadius: 176, orbitDays: 60190,
+    name: '海王星', auDistance: 30.07, radius: 2.5, orbitRadius: 176, orbitDays: 60190,
     rotationHours: 16.11, axialTilt: 28.32, color: 0x5577ff,
     phaseOffsetDeg: 304.88,
     moons: [
@@ -665,7 +663,7 @@ function createPlanet(data) {
   scene.add(orbitGroup);
 
   return {
-    orbitGroup, bodyGroup, mesh, data, initAngle,
+    orbitGroup, bodyGroup, mesh, data, initAngle, orbitLine,
     moonObjects,
     worldPos: new THREE.Vector3()
   };
@@ -726,23 +724,19 @@ renderer.domElement.addEventListener('click', e => {
 });
 
 // ==================== 旅行者1号轨迹 ====================
-// 旅行者1号关键事件:
+// 旅行者1号关键事件(精确日期):
 //   发射: 1977-09-05
-//   木星飞掠: 1979-03-05 (547天后)
-//   土星飞掠: 1980-11-12 (1164天后)
-//   之后飞出太阳系, 方向约黄道面上方35°, 速度约3.6 AU/年
-// 当前(2026)距太阳约165 AU
-const VOYAGER_DATA = {
-  launchDaysAfterJ2000: -8156,  // 1977-09-05 距 J2000 的天数
-  jupiterFlybyRelDay: 547,      // 发射后第547天飞掠木星
-  saturnFlybyRelDay: 1164,      // 发射后第1164天飞掠土星
-  postSaturnSpeed: 3.6 / 365.25, // AU/天
-  eclipticAngle: 35 * Math.PI / 180,  // 向黄道面上方35°
-  directionAzimuth: 272 * Math.PI / 180, // 飞行方位角(相对x轴)
-};
+//   木星飞掠: 1979-03-05 (发射后546天)
+//   土星飞掠: 1980-11-12 (发射后1164天)
+//   之后飞出太阳系, 方向约赤经258°(黄道面上方~35°)
+//   2012-08-25 进入星际空间 (距太阳121AU)
+//   当前(2026)距太阳约165 AU
 
-// AU转场景坐标(与行星同样的sqrt缩放)
-function auToScene(au) { return Math.sqrt(Math.max(0.01, au)) * 32; }
+// J2000 = 2000-01-01 12:00 TT
+const VOYAGER_LAUNCH_J2000_DAYS = -8156; // 1977-09-05距J2000的天数
+
+let voyagerMode = false; // 是否处于旅行者模式(线性AU比例)
+let voyagerSavedState = null; // 保存切换前的状态
 
 let voyagerState = {
   active: false,
@@ -750,110 +744,351 @@ let voyagerState = {
   probeMesh: null,
   probeGlow: null,
   trailPoints: [],
-  elapsedRelDays: 0,   // 相对发射的天数
+  elapsedRelDays: 0,
   animating: false,
 };
 
-function auToXZ(au, azimuth) {
-  const r = auToScene(au);
-  return { x: r * Math.cos(azimuth), z: r * Math.sin(azimuth) };
+// 计算某颗行星在指定J2000偏移天数时的轨道角度(弧度)
+// 这与 calcInitialAngle 逻辑一致，但可以计算任意时刻
+function getPlanetAngleAt(orbitDays, phaseOffsetDeg, j2000Days) {
+  const frac = ((j2000Days / orbitDays + phaseOffsetDeg / 360) % 1 + 1) % 1;
+  return frac * Math.PI * 2;
 }
 
+// 计算行星在指定时刻的黄道面位置(AU坐标)
+// x = AU * cos(angle), z = AU * sin(angle)
+function getPlanetPosAU(auDistance, orbitDays, phaseOffsetDeg, j2000Days) {
+  const angle = getPlanetAngleAt(orbitDays, phaseOffsetDeg, j2000Days);
+  return { x: auDistance * Math.cos(angle), z: auDistance * Math.sin(angle), angle };
+}
+
+// AU坐标转场景坐标(旅行者模式下 1AU = AU=5 场景单位)
+function auToScenePos(auX, auZ) {
+  return { x: auX * AU, z: auZ * AU };
+}
+
+// === 模式切换: 重建整个太阳系轨道 ===
+function enterVoyagerMode() {
+  voyagerMode = true;
+
+  // 保存当前状态
+  voyagerSavedState = {
+    elapsedDays,
+    timeSpeed,
+    paused,
+    cameraPos: camera.position.clone(),
+    target: controls.target.clone(),
+  };
+
+  // 移除旧的轨道线, 重建为线性AU比例
+  rebuildOrbitsForVoyager();
+
+  // 设置时间到发射时刻
+  elapsedDays = VOYAGER_LAUNCH_J2000_DAYS;
+  timeSpeed = 30;
+  paused = false;
+  document.getElementById('btnPause').textContent = '暂停';
+
+  // 行星也需要转到1977-09-05的位置
+  setPlanetsToDate(VOYAGER_LAUNCH_J2000_DAYS);
+
+  // 调整相机: 俯视内太阳系
+  camera.position.set(0, 80, 60);
+  controls.target.set(0, 0, 0);
+  camera.far = 5000;
+  camera.updateProjectionMatrix();
+  controls.maxDistance = 2000;
+
+  // 光源适应大场景
+  sunLight.distance = 5000;
+  sunLight.intensity = 3;
+
+  // 显示信息面板
+  document.getElementById('voyagerInfo').style.display = 'block';
+}
+
+function exitVoyagerMode() {
+  voyagerMode = false;
+
+  // 恢复轨道为sqrt缩放
+  rebuildOrbitsForNormal();
+
+  // 恢复状态
+  if (voyagerSavedState) {
+    elapsedDays = 0;
+    timeSpeed = 10;
+    paused = false;
+  }
+  document.getElementById('btnPause').textContent = '暂停';
+
+  // 行星回到J2000初始位置
+  setPlanetsToDate(0);
+
+  // 恢复相机
+  camera.position.set(80, 100, 150);
+  controls.target.set(0, 0, 0);
+  camera.far = 5000;
+  camera.updateProjectionMatrix();
+  controls.maxDistance = 500;
+
+  // 恢复光源
+  sunLight.distance = 800;
+  sunLight.intensity = 2.5;
+
+  document.getElementById('voyagerInfo').style.display = 'none';
+}
+
+// 重建轨道线并调整行星位置(旅行者模式: 线性AU)
+function rebuildOrbitsForVoyager() {
+  for (const p of planetObjects) {
+    const auR = p.data.auDistance * AU;
+
+    // 移除旧轨道线
+    if (p.orbitLine) { scene.remove(p.orbitLine); p.orbitLine = null; }
+
+    // 新轨道线(线性AU)
+    p.orbitLine = createOrbitLine(auR, 0x4466aa);
+    scene.add(p.orbitLine);
+
+    // 更新行星在orbitGroup中的偏移量
+    p.bodyGroup.position.x = auR;
+
+    // 行星尺寸: 按AU比例缩放(保持可见但比例正确)
+    // 木星最大(5.2AU轨道) → 半径保持4.5
+    // 其他按相对真实比例缩放
+    const realRadii = {
+      '水星': 0.6, '金星': 0.9, '地球': 1.0, '火星': 0.5,
+      '木星': 4.5, '土星': 3.8, '天王星': 2.0, '海王星': 1.9
+    };
+    const newR = realRadii[p.data.name] || 1;
+    p.mesh.scale.set(newR / p.data.radius, newR / p.data.radius, newR / p.data.radius);
+
+    // 卫星: 隐藏(在线性AU比例下卫星轨道太小无意义)
+    for (const m of p.moonObjects) {
+      m.mesh.visible = false;
+      // 卫星轨道线也在bodyGroup中, 一起隐藏
+    }
+    // 隐藏卫星轨道线(它们是bodyGroup的子元素, 用一个标记)
+    p.bodyGroup.children.forEach(child => {
+      if (child.isLine) child.visible = false;
+      if (child.isGroup) {
+        child.children.forEach(c => { if (c.isMesh) c.visible = false; });
+      }
+    });
+
+    // 土星/天王星环: 重新缩放
+    if (p.data.ring) {
+      const ringMesh = p.bodyGroup.children.find(c => c.isMesh && c !== p.mesh);
+      if (ringMesh) {
+        // 保持环相对行星的大小
+        const scaleRatio = newR / p.data.radius;
+        ringMesh.scale.set(scaleRatio, scaleRatio, scaleRatio);
+      }
+    }
+  }
+}
+
+// 恢复轨道线(正常模式: sqrt缩放)
+function rebuildOrbitsForNormal() {
+  for (const p of planetObjects) {
+    // 移除旅行者模式的轨道线
+    if (p.orbitLine) { scene.remove(p.orbitLine); p.orbitLine = null; }
+
+    // 恢复sqrt缩放轨道线
+    p.orbitLine = createOrbitLine(p.data.orbitRadius, 0x4466aa);
+    scene.add(p.orbitLine);
+
+    // 恢复行星位置
+    p.bodyGroup.position.x = p.data.orbitRadius;
+
+    // 恢复行星尺寸
+    p.mesh.scale.set(1, 1, 1);
+
+    // 恢复卫星
+    p.bodyGroup.children.forEach(child => {
+      if (child.isLine) child.visible = true;
+      if (child.isGroup) {
+        child.children.forEach(c => { if (c.isMesh) c.visible = true; });
+      }
+    });
+
+    // 恢复环缩放
+    if (p.data.ring) {
+      const ringMesh = p.bodyGroup.children.find(c => c.isMesh && c !== p.mesh);
+      if (ringMesh) ringMesh.scale.set(1, 1, 1);
+    }
+  }
+}
+
+// 将所有行星的orbitGroup旋转到指定J2000天数时的角度
+function setPlanetsToDate(j2000Days) {
+  for (const p of planetObjects) {
+    const angle = getPlanetAngleAt(p.data.orbitDays, p.data.phaseOffsetDeg, j2000Days);
+    p.orbitGroup.rotation.y = angle;
+
+    // 卫星也重置
+    for (const m of p.moonObjects) {
+      const mAngle = getPlanetAngleAt(Math.abs(m.data.orbitDays), m.data.phaseOffsetDeg || 0, j2000Days);
+      m.orbitGroup.rotation.y = mAngle;
+    }
+  }
+}
+
+// === 构建旅行者1号轨迹 ===
 function createVoyagerTrajectory() {
-  if (voyagerState.trajectoryLine) scene.remove(voyagerState.trajectoryLine);
-  if (voyagerState.probeMesh) scene.remove(voyagerState.probeMesh);
-  if (voyagerState.probeGlow) scene.remove(voyagerState.probeGlow);
+  // 清理旧轨迹
+  removeVoyagerTrajectoryOnly();
 
-  // 获取地球和木星、土星在发射时刻的位置(简化:用当前轨道位置)
-  // 发射时地球位置
-  const earthPlanet = planetObjects.find(p => p.data.name === '地球');
-  const jupiterPlanet = planetObjects.find(p => p.data.name === '木星');
-  const saturnPlanet = planetObjects.find(p => p.data.name === '土星');
+  // 切换到旅行者模式(线性AU比例)
+  enterVoyagerMode();
 
-  // 用行星的世界坐标作为飞掠点
-  const earthPos = earthPlanet ? earthPlanet.worldPos.clone() : new THREE.Vector3(32, 0, 0);
-  const jupiterPos = jupiterPlanet ? jupiterPlanet.worldPos.clone() : new THREE.Vector3(73, 0, 30);
-  const saturnPos = saturnPlanet ? saturnPlanet.worldPos.clone() : new THREE.Vector3(-60, 0, 78);
+  // 计算各关键时刻行星的真实位置(AU坐标)
+  const launchJ2000 = VOYAGER_LAUNCH_J2000_DAYS;  // -8156
+  const jupiterJ2000 = launchJ2000 + 546;           // 飞掠木星
+  const saturnJ2000 = launchJ2000 + 1164;            // 飞掠土星
 
-  // 计算旅行者1号飞行路径
-  // 阶段1: 地球→木星 (双曲线飞掠)
-  // 阶段2: 木星→土星 (引力辅助后偏转)
-  // 阶段3: 土星→飞出太阳系
+  // 各行星在关键日期的AU位置
+  const earthLaunch = getPlanetPosAU(1.0, 365.25, 100.46, launchJ2000);
+  const jupiterFlyby = getPlanetPosAU(5.203, 4332.6, 34.40, jupiterJ2000);
+  const saturnFlyby = getPlanetPosAU(9.537, 10759, 49.94, saturnJ2000);
 
+  // 构建轨迹点(基于开普勒轨道的简化引力弹弓)
   const points = [];
 
-  // 阶段1: 地球到木星 (贝塞尔曲线)
-  const earthP = earthPos.clone(); earthP.y = 0;
-  const jupiterP = jupiterPos.clone(); jupiterP.y = 0;
-  const midP1 = earthP.clone().lerp(jupiterP, 0.5);
-  midP1.y += 5; // 略微向上弯曲
+  // 阶段1: 地球→木星 (发射到飞掠木星, 546天)
+  // 旅行者1号在太阳引力场中沿双曲线轨道飞行
+  // 简化: 用引力偏转曲线插值
+  const n1 = 80; // 阶段1采样点数
+  for (let i = 0; i <= n1; i++) {
+    const t = i / n1;
+    const daysRel = t * 546;
+    // 太阳引力场中的开普勒轨道近似:
+    // 径向距离从1AU到5.2AU, 角速度随距离减小(开普勒第二定律)
+    // r(t) 遵循从1AU到5.2AU的抛物线近似(速度从11km/s减到约8km/s)
+    const rAU = 1.0 + (5.203 - 1.0) * Math.pow(t, 0.75);
+    // 角度: 从地球位置转到木星位置, 偏转角与r成反比(面积速度恒定)
+    const angleLaunch = earthLaunch.angle;
+    const angleJupiter = jupiterFlyby.angle;
+    // 处理角度穿越0/2π的情况
+    let dAngle = angleJupiter - angleLaunch;
+    if (dAngle > Math.PI) dAngle -= 2 * Math.PI;
+    if (dAngle < -Math.PI) dAngle += 2 * Math.PI;
+    // 开普勒等面积: 角速度 ∝ 1/r², 所以角度增量 ∝ 1/r²
+    // 用数值积分近似
+    let angle = angleLaunch;
+    let sumInvR2 = 0;
+    const dt = 0.001;
+    for (let tt = 0; tt < t; tt += dt) {
+      const rr = 1.0 + (5.203 - 1.0) * Math.pow(tt, 0.75);
+      sumInvR2 += dt / (rr * rr);
+    }
+    // 归一化
+    let totalInvR2 = 0;
+    for (let tt = 0; tt <= 1; tt += dt) {
+      const rr = 1.0 + (5.203 - 1.0) * Math.pow(tt, 0.75);
+      totalInvR2 += dt / (rr * rr);
+    }
+    angle = angleLaunch + dAngle * (sumInvR2 / totalInvR2);
 
-  for (let i = 0; i <= 60; i++) {
-    const t = i / 60;
-    const pt = new THREE.Vector3();
-    pt.x = (1-t)*(1-t)*earthP.x + 2*(1-t)*t*midP1.x + t*t*jupiterP.x;
-    pt.z = (1-t)*(1-t)*earthP.z + 2*(1-t)*t*midP1.z + t*t*jupiterP.z;
-    pt.y = (1-t)*(1-t)*earthP.y + 2*(1-t)*t*midP1.y + t*t*jupiterP.y;
-    points.push(pt);
+    const auX = rAU * Math.cos(angle);
+    const auZ = rAU * Math.sin(angle);
+    const scenePos = auToScenePos(auX, auZ);
+    // 微小y偏移(实际轨道面接近黄道面)
+    const y = 0.1 * rAU * Math.sin(t * 0.5);
+    points.push(new THREE.Vector3(scenePos.x, y, scenePos.z));
   }
 
-  // 阶段2: 木星到土星 (引力辅助偏转)
-  const saturnP = saturnPos.clone(); saturnP.y = 0;
-  const midP2 = jupiterP.clone().lerp(saturnP, 0.4);
-  midP2.y += 8;
+  // 阶段2: 木星→土星 (引力辅助后, 1164-546=618天)
+  // 木星引力弹弓使旅行者1号偏转约97°并加速
+  const n2 = 80;
+  const angleAfterJupiter = jupiterFlyby.angle; // 飞掠木星后偏转
+  const angleSaturn = saturnFlyby.angle;
+  let dAngle2 = angleSaturn - angleAfterJupiter;
+  if (dAngle2 > Math.PI) dAngle2 -= 2 * Math.PI;
+  if (dAngle2 < -Math.PI) dAngle2 += 2 * Math.PI;
 
-  for (let i = 1; i <= 60; i++) {
-    const t = i / 60;
-    const pt = new THREE.Vector3();
-    pt.x = (1-t)*(1-t)*jupiterP.x + 2*(1-t)*t*midP2.x + t*t*saturnP.x;
-    pt.z = (1-t)*(1-t)*jupiterP.z + 2*(1-t)*t*midP2.z + t*t*saturnP.z;
-    pt.y = (1-t)*(1-t)*jupiterP.y + 2*(1-t)*t*midP2.y + t*t*saturnP.y;
-    points.push(pt);
+  for (let i = 1; i <= n2; i++) {
+    const t = i / n2;
+    // 从5.2AU到9.5AU
+    const rAU = 5.203 + (9.537 - 5.203) * Math.pow(t, 0.8);
+    // 角度插值(开普勒等面积)
+    let sumInvR2 = 0;
+    const dt = 0.001;
+    for (let tt = 0; tt < t; tt += dt) {
+      const rr = 5.203 + (9.537 - 5.203) * Math.pow(tt, 0.8);
+      sumInvR2 += dt / (rr * rr);
+    }
+    let totalInvR2 = 0;
+    for (let tt = 0; tt <= 1; tt += dt) {
+      const rr = 5.203 + (9.537 - 5.203) * Math.pow(tt, 0.8);
+      totalInvR2 += dt / (rr * rr);
+    }
+    const angle = angleAfterJupiter + dAngle2 * (sumInvR2 / totalInvR2);
+
+    const auX = rAU * Math.cos(angle);
+    const auZ = rAU * Math.sin(angle);
+    const scenePos = auToScenePos(auX, auZ);
+    const y = 0.15 * rAU * Math.sin(t * 0.3);
+    points.push(new THREE.Vector3(scenePos.x, y, scenePos.z));
   }
 
-  // 阶段3: 土星之后飞出太阳系 (方向约35°仰角)
-  const outDir = saturnP.clone().sub(new THREE.Vector3(0,0,0)).normalize();
-  const azim = Math.atan2(outDir.z, outDir.x);
-  const maxAU = 200; // 飞到200AU
-  const maxSceneR = auToScene(maxAU);
-  const saturnR = saturnP.length();
+  // 阶段3: 土星之后飞出太阳系
+  // 飞掠土星后旅行者1号被弹射到黄道面上方约35°
+  // 速度约3.6 AU/年, 方向: 赤经258° ≈ 黄道经度约260°
+  const saturnPosScene = points[points.length - 1];
+  const n3 = 160;
+  const postSaturnYears = 46; // 1980到2026 = 46年
+  const maxAU = 9.537 + 3.6 * postSaturnYears; // ≈ 175 AU
 
-  for (let i = 1; i <= 120; i++) {
-    const t = i / 120;
-    const r = saturnR + (maxSceneR - saturnR) * t;
-    const y = saturnP.y + r * Math.sin(VOYAGER_DATA.eclipticAngle) * t;
-    const x = r * Math.cos(azim);
-    const z = r * Math.sin(azim);
-    points.push(new THREE.Vector3(x, y, z));
+  // 土星处角度作为出发方向
+  const saturnAngle = saturnFlyby.angle;
+  // 出发方向: 大约在土星角度方向, 但偏转向上
+  const outAzimuth = saturnAngle + 0.1; // 微调偏转
+
+  for (let i = 1; i <= n3; i++) {
+    const t = i / n3;
+    // 速度3.6AU/年, 减速到约3.3AU/年(太阳引力微弱减速)
+    const rAU = 9.537 + (maxAU - 9.537) * t;
+    // 角度缓慢变化(太阳引力在远处极弱, 轨道近乎直线)
+    const angle = outAzimuth + 0.05 * Math.sin(t * 0.3);
+    const auX = rAU * Math.cos(angle);
+    const auZ = rAU * Math.sin(angle);
+    const scenePos = auToScenePos(auX, auZ);
+    // 向黄道面上方35°渐变爬升
+    const elevationAngle = 35 * Math.PI / 180;
+    const distFromSaturn = rAU - 9.537;
+    const y = distFromSaturn * AU * Math.sin(elevationAngle) * t;
+    points.push(new THREE.Vector3(scenePos.x, y, scenePos.z));
   }
 
-  // 绘制轨迹线
+  // 平滑曲线
   const curve = new THREE.CatmullRomCurve3(points, false);
-  const smoothPts = curve.getPoints(400);
+  const smoothPts = curve.getPoints(500);
   const geo = new THREE.BufferGeometry().setFromPoints(smoothPts);
 
-  // 渐变色: 绿→黄→红
+  // 渐变色: 亮绿(发射)→黄(木星飞掠)→橙(土星飞掠)→红(星际空间)
   const colors = new Float32Array(smoothPts.length * 3);
   for (let i = 0; i < smoothPts.length; i++) {
     const t = i / smoothPts.length;
-    if (t < 0.3) {
-      colors[i*3] = 0.2 + t*2; colors[i*3+1] = 1; colors[i*3+2] = 0.3;
-    } else if (t < 0.55) {
-      const tt = (t - 0.3) / 0.25;
-      colors[i*3] = 1; colors[i*3+1] = 1 - tt*0.4; colors[i*3+2] = 0.3 - tt*0.2;
-    } else {
-      const tt = (t - 0.55) / 0.45;
-      colors[i*3] = 1 - tt*0.3; colors[i*3+1] = 0.6 - tt*0.4; colors[i*3+2] = 0.1;
+    if (t < 0.16) { // 地球→木星
+      const tt = t / 0.16;
+      colors[i*3] = 0.2 + tt*0.8; colors[i*3+1] = 1; colors[i*3+2] = 0.3*(1-tt);
+    } else if (t < 0.32) { // 木星→土星
+      const tt = (t - 0.16) / 0.16;
+      colors[i*3] = 1; colors[i*3+1] = 1 - tt*0.35; colors[i*3+2] = 0;
+    } else { // 土星→星际空间
+      const tt = (t - 0.32) / 0.68;
+      colors[i*3] = 1 - tt*0.3; colors[i*3+1] = 0.65 - tt*0.45; colors[i*3+2] = 0.05;
     }
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 });
+  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85, linewidth: 2 });
   voyagerState.trajectoryLine = new THREE.Line(geo, mat);
   scene.add(voyagerState.trajectoryLine);
 
-  // 探测器标记(小三角形)
-  const probeGeo = new THREE.ConeGeometry(0.8, 2, 4);
+  // 探测器标记
+  const probeGeo = new THREE.ConeGeometry(0.6, 1.5, 4);
   probeGeo.rotateX(Math.PI / 2);
   const probeMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
   voyagerState.probeMesh = new THREE.Mesh(probeGeo, probeMat);
@@ -865,41 +1100,34 @@ function createVoyagerTrajectory() {
   const glowMat = new THREE.SpriteMaterial({
     map: glowTex, color: 0x44ff88,
     transparent: true, blending: THREE.AdditiveBlending,
-    opacity: 0.4, depthWrite: false
+    opacity: 0.5, depthWrite: false
   });
   voyagerState.probeGlow = new THREE.Sprite(glowMat);
-  voyagerState.probeGlow.scale.set(6, 6, 1);
+  voyagerState.probeGlow.scale.set(4, 4, 1);
   voyagerState.probeGlow.position.copy(smoothPts[0]);
   scene.add(voyagerState.probeGlow);
 
-  // 存储路径点
+  // 存储
   voyagerState.trailPoints = smoothPts;
   voyagerState.active = true;
   voyagerState.elapsedRelDays = 0;
   voyagerState.animating = true;
-
-  // 设置时间: 回到发射时刻
-  elapsedDays = VOYAGER_DATA.launchDaysAfterJ2000;
-  timeSpeed = 50; // 50天/秒 观看轨迹
-  paused = false;
-  document.getElementById('btnPause').textContent = '暂停';
-
-  // 相机聚焦太阳附近
-  camera.position.set(30, 50, 60);
-  controls.target.set(0, 0, 0);
-
-  // 显示信息面板
-  document.getElementById('voyagerInfo').style.display = 'block';
 }
 
-function removeVoyagerTrajectory() {
+// 只移除轨迹视觉元素, 不退出旅行者模式
+function removeVoyagerTrajectoryOnly() {
   if (voyagerState.trajectoryLine) { scene.remove(voyagerState.trajectoryLine); voyagerState.trajectoryLine = null; }
   if (voyagerState.probeMesh) { scene.remove(voyagerState.probeMesh); voyagerState.probeMesh = null; }
   if (voyagerState.probeGlow) { scene.remove(voyagerState.probeGlow); voyagerState.probeGlow = null; }
-  voyagerState.active = false;
-  voyagerState.animating = false;
   voyagerState.trailPoints = [];
-  document.getElementById('voyagerInfo').style.display = 'none';
+  voyagerState.animating = false;
+}
+
+// 完全移除(包括退出模式)
+function removeVoyagerTrajectory() {
+  removeVoyagerTrajectoryOnly();
+  voyagerState.active = false;
+  if (voyagerMode) exitVoyagerMode();
 }
 
 function updateVoyagerProbe(daysDelta) {
@@ -908,80 +1136,108 @@ function updateVoyagerProbe(daysDelta) {
   voyagerState.elapsedRelDays += daysDelta;
   const relDays = voyagerState.elapsedRelDays;
 
-  // 自动调速: 土星后加速
-  if (relDays > 1200 && timeSpeed < 200) {
-    timeSpeed = 200;
+  // 自动调速
+  if (relDays < 600 && timeSpeed < 30) timeSpeed = 30;
+  else if (relDays > 1200 && timeSpeed < 100) timeSpeed = 100;
+  else if (relDays > 3000 && timeSpeed < 365) timeSpeed = 365;
+
+  // 总时间: 1977到2026 ≈ 17700天
+  const totalDays = 17700;
+  // 根据已过天数计算探测器应在的AU距离(简化模型)
+  // 1977-09-05发射, 木星546天, 土星1164天, 之后3.6AU/年
+  let targetAU;
+  if (relDays <= 0) {
+    targetAU = 1.0; // 地球轨道
+  } else if (relDays <= 546) {
+    // 地球→木星: 1AU → 5.2AU, 开普勒轨道减速
+    const t = relDays / 546;
+    targetAU = 1.0 + (5.203 - 1.0) * Math.pow(t, 0.75);
+  } else if (relDays <= 1164) {
+    // 木星→土星: 5.2AU → 9.5AU
+    const t = (relDays - 546) / (1164 - 546);
+    targetAU = 5.203 + (9.537 - 5.203) * Math.pow(t, 0.8);
+  } else {
+    // 土星之后: ~3.6 AU/年, 微弱减速
+    const yearsAfter = (relDays - 1164) / 365.25;
+    targetAU = 9.537 + 3.6 * yearsAfter - 0.005 * yearsAfter * yearsAfter;
   }
 
-  // 旅行者1号从1977到2026约49年 ≈ 17800天
-  // 总轨迹点400, 对应约49年
-  const totalDays = 17800;
-  const progress = Math.min(1, Math.max(0, relDays / totalDays));
-  const idx = Math.floor(progress * (voyagerState.trailPoints.length - 1));
+  // 在轨迹点中二分搜索距太阳最近于targetAU的点
+  // 轨迹点到原点的xz距离是单调递增的(探测器飞离太阳)
+  let idx = 0;
+  let lo = 0, hi = voyagerState.trailPoints.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    const pt = voyagerState.trailPoints[mid];
+    const ptDist = Math.sqrt(pt.x * pt.x + pt.z * pt.z) / AU;
+    if (ptDist < targetAU) lo = mid + 1;
+    else hi = mid;
+  }
+  idx = lo;
+  // 微调: 检查lo和lo-1哪个更近
+  if (idx > 0) {
+    const ptA = voyagerState.trailPoints[idx - 1];
+    const ptB = voyagerState.trailPoints[idx];
+    const dA = Math.abs(Math.sqrt(ptA.x * ptA.x + ptA.z * ptA.z) / AU - targetAU);
+    const dB = Math.abs(Math.sqrt(ptB.x * ptB.x + ptB.z * ptB.z) / AU - targetAU);
+    if (dA < dB) idx = idx - 1;
+  }
+  idx = Math.max(0, Math.min(voyagerState.trailPoints.length - 1, idx));
+
 
   if (idx < voyagerState.trailPoints.length) {
     const pos = voyagerState.trailPoints[idx];
     voyagerState.probeMesh.position.copy(pos);
     voyagerState.probeGlow.position.copy(pos);
 
-    // 探测器朝向下一个点
+    // 探测器朝向
     if (idx < voyagerState.trailPoints.length - 1) {
-      const next = voyagerState.trailPoints[idx + 1];
-      voyagerState.probeMesh.lookAt(next);
+      voyagerState.probeMesh.lookAt(voyagerState.trailPoints[idx + 1]);
     }
 
-    // 相机跟随探测器(柔和)
-    if (relDays > 100) {
-      const camOffset = new THREE.Vector3(-15, 20, -15);
+    // 相机跟随(旅行者模式, 根据距离动态调整偏移)
+    if (relDays > 50) {
+      const probeDist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+      const viewRange = Math.max(60, probeDist * 0.4);
+      const camOffset = new THREE.Vector3(-viewRange * 0.4, viewRange * 0.6, -viewRange * 0.4);
       const camTarget = pos.clone().add(camOffset);
-      camera.position.lerp(camTarget, 0.01);
-      controls.target.lerp(pos, 0.02);
+      const lerpSpeed = probeDist > 200 ? 0.015 : 0.008;
+      camera.position.lerp(camTarget, lerpSpeed);
+      controls.target.lerp(pos, lerpSpeed * 2);
     }
 
     // 更新信息面板
-    const launchDate = new Date(1977, 8, 5); // 1977-09-05
+    const launchDate = new Date(1977, 8, 5);
     const currentDate = new Date(launchDate.getTime() + relDays * 86400000);
     const dateStr = currentDate.getFullYear() + '-' +
       String(currentDate.getMonth()+1).padStart(2,'0') + '-' +
       String(currentDate.getDate()).padStart(2,'0');
 
-    // 估算距太阳距离 (AU)
-    // 用线性插值: 阶段1(0-547天): 地球(1AU)→木星(5.2AU)
-    // 阶段2(547-1164天): 木星(5.2AU)→土星(9.5AU)
-    // 阶段3(1164-17800天): 土星(9.5AU)→165AU
-    let distAU;
-    if (relDays < 0) {
-      distAU = 1.0;
-    } else if (relDays <= 547) {
-      distAU = 1.0 + (5.2 - 1.0) * (relDays / 547);
-    } else if (relDays <= 1164) {
-      distAU = 5.2 + (9.5 - 5.2) * ((relDays - 547) / (1164 - 547));
-    } else {
-      distAU = 9.5 + (165 - 9.5) * ((relDays - 1164) / (17800 - 1164));
-    }
+    // 距太阳(AU): 用xz平面距离(黄道面投影)
+    const distAU = Math.sqrt(pos.x * pos.x + pos.z * pos.z) / AU;
 
     // 关键事件
     let event = '';
     if (relDays < 0) event = '等待发射...';
-    else if (relDays < 50) event = '发射升空!';
+    else if (relDays < 10) event = '发射升空!';
     else if (relDays < 540) event = '飞往木星...';
-    else if (relDays < 570) event = '★ 木星飞掠! 引力辅助';
+    else if (relDays < 560) event = '★ 木星飞掠! 引力辅助';
     else if (relDays < 1150) event = '飞往土星...';
-    else if (relDays < 1190) event = '★ 土星飞掠! 引力辅助';
-    else if (relDays < 5000) event = '飞离太阳系...';
-    else if (relDays < 13000) event = '穿越柯伊伯带...';
-    else if (relDays < 15000) event = '接近星际空间...';
-    else event = '进入星际空间!';
+    else if (relDays < 1180) event = '★ 土星飞掠! 引力辅助';
+    else if (relDays < 4000) event = '飞离太阳系...';
+    else if (relDays < 9000) event = '穿越柯伊伯带...';
+    else if (relDays < 12700) event = '接近星际空间...';
+    else if (relDays < 12800) event = '★ 进入星际空间! (121AU)';
+    else event = '星际空间巡航中';
 
     document.getElementById('voyagerDate').textContent = '日期: ' + dateStr;
     document.getElementById('voyagerEvent').textContent = '事件: ' + event;
     document.getElementById('voyagerDist').textContent = '距太阳: ' + distAU.toFixed(1) + ' AU';
   }
 
-  // 到达终点
-  if (progress >= 1) {
+  if (relDays >= totalDays) {
     voyagerState.animating = false;
-    document.getElementById('voyagerEvent').textContent = '事件: 已达165AU 星际空间';
+    document.getElementById('voyagerEvent').textContent = '事件: 已达~165AU 星际空间';
   }
 }
 
@@ -1096,9 +1352,9 @@ function animate() {
       tip.style.left = (mouse.x * 0.5 + 0.5) * window.innerWidth + 18 + 'px';
       tip.style.top = (-mouse.y * 0.5 + 0.5) * window.innerHeight + 18 + 'px';
       document.getElementById('tipName').textContent = p.data.name;
-      const dist = p.data.orbitRadius;
+      const distAU = p.data.auDistance;
       document.getElementById('tipInfo').innerHTML =
-        `轨道半径: ${dist}<br>` +
+        `轨道半径: ${distAU} AU<br>` +
         `公转周期: ${p.data.orbitDays.toFixed(1)} 天<br>` +
         `自转周期: ${Math.abs(p.data.rotationHours).toFixed(1)} 小时${p.data.rotationHours < 0 ? ' (逆行)' : ''}`;
     }
