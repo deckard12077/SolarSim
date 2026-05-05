@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>太阳系三维模拟</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #000; overflow: hidden; font-family: "Microsoft YaHei","SimHei",sans-serif; }
@@ -46,7 +49,7 @@ canvas { display: block; }
 
 <div id="panel">
   <div class="title">太阳系三维模拟</div>
-  <div><span class="key">时间流速</span><span class="val" id="speedVal">1 天/秒</span></div>
+  <div><span class="key">时间流速</span><span class="val" id="speedVal">10 天/秒</span></div>
   <div><span class="key">已过天数</span><span class="val" id="daysVal">0</span></div>
   <div class="sep">─────────────</div>
   <div>
@@ -106,25 +109,29 @@ const MS_PER_DAY = 86400000;
 
 const PLANET_DATA = [
   {
-    name: '水星', radius: 0.9, orbitRadius: 10, orbitDays: 87.97,
+    // 真实轨道半径比例: 0.387 AU → 缩放到 8
+    name: '水星', radius: 0.9, orbitRadius: 8, orbitDays: 87.97,
     rotationHours: 1407.6, axialTilt: 0.034, color: 0x8c7e6d,
     phaseOffsetDeg: 252.25, moons: []
   },
   {
+    // 0.723 AU → 15
     name: '金星', radius: 1.5, orbitRadius: 15, orbitDays: 224.7,
     rotationHours: -5832.5, axialTilt: 177.4, color: 0xe8c56d,
     phaseOffsetDeg: 181.98, moons: []
   },
   {
+    // 1.0 AU → 20 (基准)
     name: '地球', radius: 1.6, orbitRadius: 20, orbitDays: 365.25,
-    rotationHours: 23.93, axialTilt: 23.44, color: 0x2266cc,
+    rotationHours: 23.93, axialTilt: 23.44, color: 0x3399ee,
     phaseOffsetDeg: 100.46,
     moons: [
       { name: '月球', radius: 0.35, orbitRadius: 2.8, orbitDays: 27.32, color: 0xaaaaaa, phaseOffsetDeg: 0 }
     ]
   },
   {
-    name: '火星', radius: 1.1, orbitRadius: 28, orbitDays: 687.0,
+    // 1.524 AU → 30
+    name: '火星', radius: 1.1, orbitRadius: 30, orbitDays: 687.0,
     rotationHours: 24.62, axialTilt: 25.19, color: 0xcc4422,
     phaseOffsetDeg: 355.45,
     moons: [
@@ -133,7 +140,8 @@ const PLANET_DATA = [
     ]
   },
   {
-    name: '木星', radius: 4.5, orbitRadius: 48, orbitDays: 4332.6,
+    // 5.203 AU → 52 (稍压缩外行星间距)
+    name: '木星', radius: 4.5, orbitRadius: 52, orbitDays: 4332.6,
     rotationHours: 9.93, axialTilt: 3.13, color: 0xc8a55a,
     phaseOffsetDeg: 34.40,
     moons: [
@@ -144,7 +152,8 @@ const PLANET_DATA = [
     ]
   },
   {
-    name: '土星', radius: 3.8, orbitRadius: 68, orbitDays: 10759,
+    // 9.537 AU → 72
+    name: '土星', radius: 3.8, orbitRadius: 72, orbitDays: 10759,
     rotationHours: 10.66, axialTilt: 26.73, color: 0xd4b86a,
     phaseOffsetDeg: 49.94,
     ring: { inner: 5.0, outer: 8.5, color: 0xc8b88080 },
@@ -153,7 +162,8 @@ const PLANET_DATA = [
     ]
   },
   {
-    name: '天王星', radius: 2.6, orbitRadius: 90, orbitDays: 30687,
+    // 19.19 AU → 100
+    name: '天王星', radius: 2.6, orbitRadius: 100, orbitDays: 30687,
     rotationHours: -17.24, axialTilt: 97.77, color: 0x55cccc,
     phaseOffsetDeg: 313.23,
     ring: { inner: 3.5, outer: 4.8, color: 0x88aaaa60 },
@@ -162,7 +172,8 @@ const PLANET_DATA = [
     ]
   },
   {
-    name: '海王星', radius: 2.5, orbitRadius: 115, orbitDays: 60190,
+    // 30.07 AU → 130
+    name: '海王星', radius: 2.5, orbitRadius: 130, orbitDays: 60190,
     rotationHours: 16.11, axialTilt: 28.32, color: 0x3355ee,
     phaseOffsetDeg: 304.88,
     moons: [
@@ -197,7 +208,7 @@ if (!renderer.capabilities.isWebGL2) {
 }
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 5000);
-camera.position.set(40, 60, 80);
+camera.position.set(50, 70, 100);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -433,7 +444,7 @@ let focusTransition = 0; // 0=未聚焦, >0 正在过渡
 let resetTransition = 0; // 0=未重置, >0 正在过渡
 let resetStartCamPos = null;
 let resetStartTarget = null;
-const DEFAULT_CAM_POS = new THREE.Vector3(40, 60, 80);
+const DEFAULT_CAM_POS = new THREE.Vector3(50, 70, 100);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
 renderer.domElement.addEventListener('mousemove', e => {
