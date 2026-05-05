@@ -792,9 +792,7 @@ function enterVoyagerMode() {
   // 行星也需要转到1977-09-05的位置
   setPlanetsToDate(VOYAGER_LAUNCH_J2000_DAYS);
 
-  // 调整相机: 俯视内太阳系
-  camera.position.set(0, 80, 60);
-  controls.target.set(0, 0, 0);
+  // 不切换视角，仅扩大可视范围
   camera.far = 5000;
   camera.updateProjectionMatrix();
   controls.maxDistance = 2000;
@@ -824,9 +822,7 @@ function exitVoyagerMode() {
   // 行星回到J2000初始位置
   setPlanetsToDate(0);
 
-  // 恢复相机
-  camera.position.set(80, 100, 150);
-  controls.target.set(0, 0, 0);
+  // 不切换视角，恢复可视范围
   camera.far = 5000;
   camera.updateProjectionMatrix();
   controls.maxDistance = 500;
