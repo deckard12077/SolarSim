@@ -221,24 +221,19 @@ function createSun() {
   const geo = new THREE.SphereGeometry(4, 48, 48);
   const mat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
   const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = 0;
   group.add(mesh);
 
-  // 内光晕
-  const glowGeo = new THREE.SphereGeometry(4.8, 32, 32);
-  const glowMat = new THREE.MeshBasicMaterial({
-    color: 0xffaa22, transparent: true, opacity: 0.2,
-    side: THREE.BackSide
-  });
-  group.add(new THREE.Mesh(glowGeo, glowMat));
-
-  // 外光晕 sprite
+  // 外光晕 sprite（仅用 sprite 实现光晕，避免深度冲突）
   const spriteTex = createGlowTexture();
   const spriteMat = new THREE.SpriteMaterial({
     map: spriteTex, color: 0xffcc44,
-    transparent: true, blending: THREE.AdditiveBlending, opacity: 0.6
+    transparent: true, blending: THREE.AdditiveBlending, opacity: 0.5,
+    depthWrite: false
   });
   const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(22, 22, 1);
+  sprite.scale.set(24, 24, 1);
+  sprite.renderOrder = -1;
   group.add(sprite);
 
   scene.add(group);
@@ -418,28 +413,7 @@ for (const pData of PLANET_DATA) {
   planetObjects.push(createPlanet(pData));
 }
 
-// ==================== 标签 ====================
-function createLabel(text) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  ctx.font = '28px "Microsoft YaHei","SimHei",sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(text, 128, 40);
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.75, depthTest: false });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(5, 1.25, 1);
-  return sprite;
-}
-
-for (const p of planetObjects) {
-  const label = createLabel(p.data.name);
-  p.bodyGroup.add(label);
-  label.position.y = p.data.radius + 1.2;
-  p.label = label;
-}
+// ==================== 标签（已移除固定名称显示，仅悬停 tooltip） ====================
 
 // ==================== 动画状态 ====================
 let timeSpeed = 1.0; // 天/秒
@@ -587,15 +561,6 @@ function animate() {
   } else {
     hoveredPlanet = null;
     tip.style.display = 'none';
-  }
-
-  // 标签始终面向相机（sprite 自动面向）
-  // 根据距离调整标签透明度
-  for (const p of planetObjects) {
-    if (p.label) {
-      const dist = camera.position.distanceTo(p.worldPos);
-      p.label.material.opacity = dist < 150 ? 0.75 : 0.35;
-    }
   }
 
   // 聚焦动画
