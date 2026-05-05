@@ -105,67 +105,67 @@ const MS_PER_DAY = 86400000;
 
 const PLANET_DATA = [
   {
-    name: '水星', radius: 0.35, orbitRadius: 10, orbitDays: 87.97,
+    name: '水星', radius: 0.9, orbitRadius: 10, orbitDays: 87.97,
     rotationHours: 1407.6, axialTilt: 0.034, color: 0xaaaaaa,
     phaseOffsetDeg: 252.25, moons: []
   },
   {
-    name: '金星', radius: 0.6, orbitRadius: 15, orbitDays: 224.7,
+    name: '金星', radius: 1.5, orbitRadius: 15, orbitDays: 224.7,
     rotationHours: -5832.5, axialTilt: 177.4, color: 0xe8c060,
     phaseOffsetDeg: 181.98, moons: []
   },
   {
-    name: '地球', radius: 0.65, orbitRadius: 20, orbitDays: 365.25,
+    name: '地球', radius: 1.6, orbitRadius: 20, orbitDays: 365.25,
     rotationHours: 23.93, axialTilt: 23.44, color: 0x4488dd,
     phaseOffsetDeg: 100.46,
     moons: [
-      { name: '月球', radius: 0.15, orbitRadius: 1.6, orbitDays: 27.32, color: 0xcccccc, phaseOffsetDeg: 0 }
+      { name: '月球', radius: 0.35, orbitRadius: 2.8, orbitDays: 27.32, color: 0xcccccc, phaseOffsetDeg: 0 }
     ]
   },
   {
-    name: '火星', radius: 0.45, orbitRadius: 28, orbitDays: 687.0,
+    name: '火星', radius: 1.1, orbitRadius: 28, orbitDays: 687.0,
     rotationHours: 24.62, axialTilt: 25.19, color: 0xcc4422,
     phaseOffsetDeg: 355.45,
     moons: [
-      { name: '火卫一', radius: 0.06, orbitRadius: 1.1, orbitDays: 0.319, color: 0x998877, phaseOffsetDeg: 0 },
-      { name: '火卫二', radius: 0.04, orbitRadius: 1.5, orbitDays: 1.263, color: 0x887766, phaseOffsetDeg: 90 }
+      { name: '火卫一', radius: 0.15, orbitRadius: 2.0, orbitDays: 0.319, color: 0x998877, phaseOffsetDeg: 0 },
+      { name: '火卫二', radius: 0.12, orbitRadius: 2.8, orbitDays: 1.263, color: 0x887766, phaseOffsetDeg: 90 }
     ]
   },
   {
-    name: '木星', radius: 2.0, orbitRadius: 48, orbitDays: 4332.6,
+    name: '木星', radius: 4.5, orbitRadius: 48, orbitDays: 4332.6,
     rotationHours: 9.93, axialTilt: 3.13, color: 0xd4a86a,
     phaseOffsetDeg: 34.40,
     moons: [
-      { name: '木卫一', radius: 0.14, orbitRadius: 3.2, orbitDays: 1.769, color: 0xddcc44, phaseOffsetDeg: 0 },
-      { name: '木卫二', radius: 0.12, orbitRadius: 3.9, orbitDays: 3.551, color: 0xaabbcc, phaseOffsetDeg: 60 },
-      { name: '木卫三', radius: 0.18, orbitRadius: 4.8, orbitDays: 7.155, color: 0x998877, phaseOffsetDeg: 120 },
-      { name: '木卫四', radius: 0.16, orbitRadius: 5.8, orbitDays: 16.689, color: 0x776655, phaseOffsetDeg: 200 }
+      { name: '木卫一', radius: 0.3, orbitRadius: 6.5, orbitDays: 1.769, color: 0xddcc44, phaseOffsetDeg: 0 },
+      { name: '木卫二', radius: 0.26, orbitRadius: 7.8, orbitDays: 3.551, color: 0xaabbcc, phaseOffsetDeg: 60 },
+      { name: '木卫三', radius: 0.38, orbitRadius: 9.2, orbitDays: 7.155, color: 0x998877, phaseOffsetDeg: 120 },
+      { name: '木卫四', radius: 0.34, orbitRadius: 11.0, orbitDays: 16.689, color: 0x776655, phaseOffsetDeg: 200 }
     ]
   },
   {
-    name: '土星', radius: 1.7, orbitRadius: 68, orbitDays: 10759,
+    name: '土星', radius: 3.8, orbitRadius: 68, orbitDays: 10759,
     rotationHours: 10.66, axialTilt: 26.73, color: 0xe8d080,
     phaseOffsetDeg: 49.94,
-    ring: { inner: 2.2, outer: 4.0, color: 0xc8b88080 },
+    ring: { inner: 5.0, outer: 8.5, color: 0xc8b88080 },
     moons: [
-      { name: '土卫六', radius: 0.18, orbitRadius: 4.8, orbitDays: 15.945, color: 0xddaa55, phaseOffsetDeg: 0 }
+      { name: '土卫六', radius: 0.38, orbitRadius: 9.5, orbitDays: 15.945, color: 0xddaa55, phaseOffsetDeg: 0 }
     ]
   },
   {
-    name: '天王星', radius: 1.1, orbitRadius: 90, orbitDays: 30687,
+    name: '天王星', radius: 2.6, orbitRadius: 90, orbitDays: 30687,
     rotationHours: -17.24, axialTilt: 97.77, color: 0x66cccc,
     phaseOffsetDeg: 313.23,
-    ring: { inner: 1.5, outer: 2.0, color: 0x88aaaa60 },
+    ring: { inner: 3.5, outer: 4.8, color: 0x88aaaa60 },
     moons: [
-      { name: '天卫三', radius: 0.08, orbitRadius: 2.2, orbitDays: 8.706, color: 0x99aabb, phaseOffsetDeg: 0 }
+      { name: '天卫三', radius: 0.18, orbitRadius: 4.5, orbitDays: 8.706, color: 0x99aabb, phaseOffsetDeg: 0 }
     ]
   },
   {
-    name: '海王星', radius: 1.05, orbitRadius: 115, orbitDays: 60190,
+    name: '海王星', radius: 2.5, orbitRadius: 115, orbitDays: 60190,
     rotationHours: 16.11, axialTilt: 28.32, color: 0x3355cc,
     phaseOffsetDeg: 304.88,
     moons: [
-      { name: '海卫一', radius: 0.1, orbitRadius: 2.2, orbitDays: -5.877, color: 0x99aaaa, phaseOffsetDeg: 0 }
+      { name: '海卫一', radius: 0.22, orbitRadius: 4.5, orbitDays: -5.877, color: 0x99aaaa, phaseOffsetDeg: 0 }
     ]
   }
 ];
@@ -304,7 +304,7 @@ function createStarField() {
 }
 
 // ==================== 轨道线 ====================
-function createOrbitLine(radius, color = 0x334466) {
+function createOrbitLine(radius, color = 0x4466aa) {
   const segments = 128;
   const points = [];
   for (let i = 0; i <= segments; i++) {
@@ -314,7 +314,7 @@ function createOrbitLine(radius, color = 0x334466) {
     ));
   }
   const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 });
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 });
   return new THREE.Line(geo, mat);
 }
 
@@ -394,7 +394,7 @@ function createPlanet(data) {
     moonOrbitGroup.add(moonMesh);
 
     // 卫星轨道线
-    const moonOrbitLine = createOrbitLine(mData.orbitRadius, 0x222244);
+    const moonOrbitLine = createOrbitLine(mData.orbitRadius, 0x335588);
     bodyGroup.add(moonOrbitLine);
 
     bodyGroup.add(moonOrbitGroup);
