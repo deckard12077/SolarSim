@@ -417,7 +417,7 @@ for (const pData of PLANET_DATA) {
 // ==================== 标签（已移除固定名称显示，仅悬停 tooltip） ====================
 
 // ==================== 动画状态 ====================
-let timeSpeed = 1.0; // 天/秒
+let timeSpeed = 10.0; // 天/秒
 let paused = false;
 let elapsedDays = 0;
 const clock = new THREE.Clock();
@@ -497,7 +497,7 @@ function adjustSpeed(dir) {
 }
 
 function resetView() {
-  timeSpeed = 1;
+  timeSpeed = 10;
   paused = false;
   elapsedDays = 0;
   focusedPlanet = null;
@@ -575,14 +575,18 @@ function animate() {
     tip.style.display = 'none';
   }
 
-  // 重置视角平滑过渡
+  // 重置视角平滑过渡（与聚焦行星一致的追逐式 lerp）
   if (resetTransition > 0) {
-    resetTransition = Math.min(1, resetTransition + dt * 2);
-    const smooth = resetTransition * resetTransition * (3 - 2 * resetTransition); // smoothstep
-    camera.position.lerpVectors(resetStartCamPos, DEFAULT_CAM_POS, smooth);
-    controls.target.lerpVectors(resetStartTarget, DEFAULT_TARGET, smooth);
-    if (resetTransition >= 1) {
+    const dist = camera.position.distanceTo(DEFAULT_CAM_POS);
+    const tDist = controls.target.distanceTo(DEFAULT_TARGET);
+    // 足够接近时停止
+    if (dist < 0.5 && tDist < 0.5) {
+      camera.position.copy(DEFAULT_CAM_POS);
+      controls.target.copy(DEFAULT_TARGET);
       resetTransition = 0;
+    } else {
+      camera.position.lerp(DEFAULT_CAM_POS, 0.04);
+      controls.target.lerp(DEFAULT_TARGET, 0.04);
     }
   }
 
