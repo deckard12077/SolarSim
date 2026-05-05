@@ -217,8 +217,249 @@ controls.minDistance = 5;
 controls.maxDistance = 500;
 controls.target.set(0, 0, 0);
 
+// ==================== 行星纹理生成 ====================
+function generatePlanetTexture(name, baseColor) {
+  const W = 512, H = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 解析基色
+  const r = (baseColor >> 16) & 0xff, g = (baseColor >> 8) & 0xff, b = baseColor & 0xff;
+  const base = `rgb(${r},${g},${b})`;
+
+  // 简易噪声
+  function noise(x, y, s) { return (Math.sin(x*12.9898/s + y*78.233/s)*43758.5453) % 1; }
+  function smoothNoise(x, y, s) {
+    const ix = Math.floor(x/s), iy = Math.floor(y/s);
+    const fx = (x/s) - ix, fy = (y/s) - iy;
+    const a = noise(ix,iy,1), b2 = noise(ix+1,iy,1), c = noise(ix,iy+1,1), d = noise(ix+1,iy+1,1);
+    return a*(1-fx)*(1-fy) + b2*fx*(1-fy) + c*(1-fx)*fy + d*fx*fy;
+  }
+
+  switch(name) {
+    case '水星': {
+      // 灰色基底+陨石坑
+      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
+      for (let i = 0; i < 120; i++) {
+        const cx = Math.random()*W, cy = Math.random()*H, cr = 2+Math.random()*12;
+        const shade = 0.6 + Math.random()*0.3;
+        ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2);
+        ctx.fillStyle = `rgba(${Math.floor(r*shade)},${Math.floor(g*shade)},${Math.floor(b*shade)},0.6)`;
+        ctx.fill();
+        ctx.beginPath(); ctx.arc(cx-1,cy-1,cr*0.7,0,Math.PI*2);
+        ctx.fillStyle = `rgba(${Math.floor(r*shade*1.2)},${Math.floor(g*shade*1.2)},${Math.floor(b*shade*1.2)},0.4)`;
+        ctx.fill();
+      }
+      break;
+    }
+    case '金星': {
+      // 黄色旋涡云层
+      const imgData = ctx.createImageData(W, H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const v = smoothNoise(x, y, 40) * 0.5 + smoothNoise(x, y, 15) * 0.3 + smoothNoise(x, y, 6) * 0.2;
+          const i = (y*W+x)*4;
+          imgData.data[i]   = Math.min(255, r + (v-0.5)*60);
+          imgData.data[i+1] = Math.min(255, g + (v-0.5)*50);
+          imgData.data[i+2] = Math.min(255, b + (v-0.5)*40);
+          imgData.data[i+3] = 255;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      // 漩涡条纹
+      for (let i = 0; i < 8; i++) {
+        const yy = H*0.1 + Math.random()*H*0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, yy);
+        for (let x = 0; x < W; x += 20) {
+          ctx.lineTo(x, yy + Math.sin(x*0.02+i)*15 + Math.sin(x*0.05)*8);
+        }
+        ctx.strokeStyle = `rgba(${r+30},${g+20},${b},0.25)`;
+        ctx.lineWidth = 6 + Math.random()*8;
+        ctx.stroke();
+      }
+      break;
+    }
+    case '地球': {
+      // 蓝色海洋底
+      ctx.fillStyle = '#1a5fa0'; ctx.fillRect(0,0,W,H);
+      // 大陆块
+      const continents = [
+        {x:120,y:70,rx:50,ry:45}, // 欧亚
+        {x:150,y:65,rx:35,ry:30}, // 亚洲延伸
+        {x:130,y:130,rx:25,ry:35}, // 非洲
+        {x:350,y:80,rx:45,ry:50}, // 北美
+        {x:360,y:150,rx:25,ry:40}, // 南美
+        {x:430,y:190,rx:35,ry:25}, // 澳洲
+        {x:256,y:240,rx:120,ry:25}, // 南极
+        {x:256,y:10,rx:100,ry:15}, // 北极冰
+      ];
+      for (const c of continents) {
+        const grad = ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,Math.max(c.rx,c.ry));
+        grad.addColorStop(0, '#3a8a30');
+        grad.addColorStop(0.5, '#4a7a28');
+        grad.addColorStop(0.8, '#6a9a40');
+        grad.addColorStop(1, 'rgba(100,150,60,0)');
+        ctx.beginPath(); ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
+        ctx.fillStyle = grad; ctx.fill();
+      }
+      // 沙漠区
+      for (const c of [{x:140,y:110,rx:20,ry:10},{x:390,y:110,rx:15,ry:10}]) {
+        ctx.beginPath(); ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(180,160,100,0.5)'; ctx.fill();
+      }
+      // 云层
+      for (let i = 0; i < 20; i++) {
+        const cx = Math.random()*W, cy = Math.random()*H;
+        ctx.beginPath(); ctx.ellipse(cx,cy,20+Math.random()*40,6+Math.random()*12,Math.random()*0.5,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill();
+      }
+      break;
+    }
+    case '火星': {
+      // 红橙基底
+      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
+      const imgData = ctx.getImageData(0,0,W,H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const v = smoothNoise(x,y,30)*0.4 + smoothNoise(x,y,10)*0.3 + smoothNoise(x,y,4)*0.3;
+          const i = (y*W+x)*4;
+          imgData.data[i]   = Math.min(255, Math.max(0, r + (v-0.5)*80));
+          imgData.data[i+1] = Math.min(255, Math.max(0, g + (v-0.5)*60));
+          imgData.data[i+2] = Math.min(255, Math.max(0, b + (v-0.5)*40));
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      // 暗色斑块
+      for (let i = 0; i < 15; i++) {
+        const cx = Math.random()*W, cy = 30+Math.random()*(H-60), crx = 15+Math.random()*35, cry = 10+Math.random()*20;
+        ctx.beginPath(); ctx.ellipse(cx,cy,crx,cry,0,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(100,40,20,0.3)'; ctx.fill();
+      }
+      // 极冠
+      ctx.beginPath(); ctx.ellipse(256,8,60,12,0,0,Math.PI*2);
+      ctx.fillStyle = 'rgba(230,220,210,0.6)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(256,H-5,50,10,0,0,Math.PI*2);
+      ctx.fillStyle = 'rgba(230,220,210,0.5)'; ctx.fill();
+      break;
+    }
+    case '木星': {
+      // 水平条带
+      const bandColors = [
+        [200,170,100],[180,140,80],[220,190,120],[160,120,70],
+        [210,180,110],[190,150,85],[230,200,130],[170,130,75],
+        [200,165,95],[180,145,90],[215,185,115],[165,125,70],
+        [205,175,105],[185,150,88],[225,195,125],[175,135,80],
+      ];
+      const bandH = H / bandColors.length;
+      for (let i = 0; i < bandColors.length; i++) {
+        const [br,bg,bb] = bandColors[i];
+        ctx.fillStyle = `rgb(${br},${bg},${bb})`;
+        ctx.fillRect(0, i*bandH, W, bandH+1);
+      }
+      // 条带波动
+      const imgData = ctx.getImageData(0,0,W,H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const v = smoothNoise(x,y,20)*0.5 + smoothNoise(x,y,8)*0.3;
+          const i = (y*W+x)*4;
+          imgData.data[i]   = Math.min(255, Math.max(0, imgData.data[i] + (v-0.5)*40));
+          imgData.data[i+1] = Math.min(255, Math.max(0, imgData.data[i+1] + (v-0.5)*30));
+          imgData.data[i+2] = Math.min(255, Math.max(0, imgData.data[i+2] + (v-0.5)*20));
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      // 大红斑
+      ctx.beginPath(); ctx.ellipse(320, 145, 28, 16, 0.1, 0, Math.PI*2);
+      const grs = ctx.createRadialGradient(320,145,0,320,145,28);
+      grs.addColorStop(0, 'rgba(200,80,50,0.8)');
+      grs.addColorStop(0.6, 'rgba(180,90,60,0.5)');
+      grs.addColorStop(1, 'rgba(180,120,70,0)');
+      ctx.fillStyle = grs; ctx.fill();
+      break;
+    }
+    case '土星': {
+      // 淡金条带
+      const bandColors = [
+        [220,200,140],[200,180,120],[230,210,150],[190,170,110],
+        [215,195,135],[205,185,125],[225,205,145],[195,175,115],
+        [220,200,140],[200,180,120],[230,210,150],[190,170,110],
+      ];
+      const bandH = H / bandColors.length;
+      for (let i = 0; i < bandColors.length; i++) {
+        const [br,bg,bb] = bandColors[i];
+        ctx.fillStyle = `rgb(${br},${bg},${bb})`;
+        ctx.fillRect(0, i*bandH, W, bandH+1);
+      }
+      // 柔化
+      const imgData = ctx.getImageData(0,0,W,H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const v = smoothNoise(x,y,25)*0.4 + smoothNoise(x,y,10)*0.3;
+          const i = (y*W+x)*4;
+          imgData.data[i]   = Math.min(255, Math.max(0, imgData.data[i] + (v-0.5)*30));
+          imgData.data[i+1] = Math.min(255, Math.max(0, imgData.data[i+1] + (v-0.5)*25));
+          imgData.data[i+2] = Math.min(255, Math.max(0, imgData.data[i+2] + (v-0.5)*15));
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      break;
+    }
+    case '天王星': {
+      // 青色淡条带
+      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
+      const imgData = ctx.getImageData(0,0,W,H);
+      for (let y = 0; y < H; y++) {
+        const band = Math.sin(y * 0.15) * 12;
+        for (let x = 0; x < W; x++) {
+          const v = smoothNoise(x,y,30)*0.3;
+          const i = (y*W+x)*4;
+          imgData.data[i]   = Math.min(255, Math.max(0, r + band + (v-0.5)*20));
+          imgData.data[i+1] = Math.min(255, Math.max(0, g + band + (v-0.5)*15));
+          imgData.data[i+2] = Math.min(255, Math.max(0, b + band*0.5 + (v-0.5)*10));
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      break;
+    }
+    case '海王星': {
+      // 深蓝条带+暗斑
+      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
+      const imgData = ctx.getImageData(0,0,W,H);
+      for (let y = 0; y < H; y++) {
+        const band = Math.sin(y * 0.12) * 15;
+        for (let x = 0; x < W; x++) {
+          const v = smoothNoise(x,y,25)*0.3 + smoothNoise(x,y,8)*0.2;
+          const i = (y*W+x)*4;
+          imgData.data[i]   = Math.min(255, Math.max(0, r + band*0.3 + (v-0.5)*20));
+          imgData.data[i+1] = Math.min(255, Math.max(0, g + band*0.5 + (v-0.5)*15));
+          imgData.data[i+2] = Math.min(255, Math.max(0, b + band + (v-0.5)*10));
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      // 大暗斑
+      ctx.beginPath(); ctx.ellipse(180, 110, 22, 14, -0.2, 0, Math.PI*2);
+      const ndb = ctx.createRadialGradient(180,110,0,180,110,22);
+      ndb.addColorStop(0, 'rgba(20,40,120,0.6)');
+      ndb.addColorStop(0.7, 'rgba(40,60,150,0.3)');
+      ndb.addColorStop(1, 'rgba(60,80,180,0)');
+      ctx.fillStyle = ndb; ctx.fill();
+      break;
+    }
+    default: {
+      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+
 // ==================== 光照 ====================
-const sunLight = new THREE.PointLight(0xfff0d0, 2.5, 600, 0.5);
+const sunLight = new THREE.PointLight(0xfff0d0, 2.5, 800, 0.4);
 sunLight.position.set(0, 0, 0);
 scene.add(sunLight);
 
@@ -359,8 +600,10 @@ function createPlanet(data) {
 
   // 行星本体
   const geo = new THREE.SphereGeometry(data.radius, 32, 32);
+  const texture = generatePlanetTexture(data.name, data.color);
   const mat = new THREE.MeshStandardMaterial({
-    color: data.color, roughness: 0.7, metalness: 0.1
+    map: texture, roughness: 0.7, metalness: 0.1,
+    emissive: data.color, emissiveIntensity: 0.08
   });
   const mesh = new THREE.Mesh(geo, mat);
   bodyGroup.add(mesh);
