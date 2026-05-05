@@ -429,6 +429,13 @@ let hoveredPlanet = null;
 let focusedPlanet = null;
 let focusTransition = 0; // 0=未聚焦, >0 正在过渡
 
+// 重置视角平滑过渡
+let resetTransition = 0; // 0=未重置, >0 正在过渡
+let resetStartCamPos = null;
+let resetStartTarget = null;
+const DEFAULT_CAM_POS = new THREE.Vector3(40, 60, 80);
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
+
 renderer.domElement.addEventListener('mousemove', e => {
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -444,6 +451,7 @@ renderer.domElement.addEventListener('click', e => {
     if (p) {
       focusedPlanet = p;
       focusTransition = 0;
+      resetTransition = 0;
     }
   } else {
     // 点击空白取消聚焦
@@ -489,14 +497,16 @@ function adjustSpeed(dir) {
 }
 
 function resetView() {
-  camera.position.set(40, 60, 80);
-  controls.target.set(0, 0, 0);
   timeSpeed = 1;
   paused = false;
   elapsedDays = 0;
   focusedPlanet = null;
   focusTransition = 0;
   document.getElementById('btnPause').textContent = '暂停';
+  // 启动平滑过渡
+  resetStartCamPos = camera.position.clone();
+  resetStartTarget = controls.target.clone();
+  resetTransition = 0.001;
 }
 
 // ==================== 窗口 resize ====================
@@ -565,8 +575,19 @@ function animate() {
     tip.style.display = 'none';
   }
 
+  // 重置视角平滑过渡
+  if (resetTransition > 0) {
+    resetTransition = Math.min(1, resetTransition + dt * 2);
+    const smooth = resetTransition * resetTransition * (3 - 2 * resetTransition); // smoothstep
+    camera.position.lerpVectors(resetStartCamPos, DEFAULT_CAM_POS, smooth);
+    controls.target.lerpVectors(resetStartTarget, DEFAULT_TARGET, smooth);
+    if (resetTransition >= 1) {
+      resetTransition = 0;
+    }
+  }
+
   // 聚焦动画
-  if (focusedPlanet) {
+  if (focusedPlanet && resetTransition === 0) {
     focusTransition = Math.min(1, focusTransition + dt * 2);
     const t = focusTransition;
     const smooth = t * t * (3 - 2 * t); // smoothstep
