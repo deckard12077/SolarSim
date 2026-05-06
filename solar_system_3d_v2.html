@@ -23,6 +23,15 @@ canvas { display: block; }
 #info .key { color: #8ab4f8; }
 #info .date { color: #aaa; font-size: 11px; margin-top: 6px; }
 
+.planet-label {
+  position: absolute; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 0 6px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,0.8);
+  transform: translate(-50%, -100%); padding-bottom: 4px;
+  text-align: center; line-height: 1.35;
+}
+.planet-label .pname { font-size: 12px; font-weight: bold; }
+.planet-label .au { color: #999; font-size: 10px; }
+
 .au-label {
   position: absolute; color: #333355; font-size: 10px;
   pointer-events: none; transform: translate(4px, -50%);
@@ -59,9 +68,6 @@ canvas { display: block; }
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Line2 } from 'three/addons/lines/Line2.js';
-import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
 // ==================== 常量 ====================
 const AU = 5;                           // 1 AU = 5 场景单位
@@ -192,7 +198,7 @@ scene.add(new THREE.AmbientLight(0x222244, 0.6));
 (function() {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(
-    new THREE.SphereGeometry(0.8, 32, 32),
+    new THREE.SphereGeometry(1.5, 32, 32),
     new THREE.MeshBasicMaterial({ color: 0xffdd44 })
   ));
   const c = document.createElement('canvas');
@@ -210,7 +216,7 @@ scene.add(new THREE.AmbientLight(0x222244, 0.6));
     transparent: true, blending: THREE.AdditiveBlending,
     opacity: 0.4, depthWrite: false
   }));
-  glow.scale.set(8, 8, 1);
+  glow.scale.set(14, 14, 1);
   g.add(glow);
   scene.add(g);
 })();
@@ -240,11 +246,11 @@ const labelData = [];
   }
 })();
 
-// ==================== 轨道线 (开普勒椭圆, Line2粗线) ====================
+// ==================== 轨道线 (开普勒椭圆) ====================
 function buildOrbitLine(planet) {
   const { a, e, i, Omega, omega } = planet;
   const N = 512;
-  const positions = [];
+  const pts = [];
   const w = omega * DEG, O = Omega * DEG, inc = i * DEG;
   const cw = Math.cos(w), sw = Math.sin(w);
   const cO = Math.cos(O), sO = Math.sin(O);
@@ -264,19 +270,13 @@ function buildOrbitLine(planet) {
     const ye = (sO*cw + cO*sw*ci)*xo + (-sO*sw + cO*cw*ci)*yo;
     const ze = (sw*si)*xo + (cw*si)*yo;
 
-    positions.push(xe * AU, ze * AU, -ye * AU);
+    pts.push(new THREE.Vector3(xe * AU, ze * AU, -ye * AU));
   }
 
-  const geo = new LineGeometry();
-  geo.setPositions(positions);
-  const mat = new LineMaterial({
-    color: planet.orbitColor,
-    linewidth: 2.5,
-    transparent: true,
-    opacity: 0.7,
-    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
-  });
-  return new Line2(geo, mat);
+  return new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: planet.orbitColor, transparent: true, opacity: 0.55 })
+  );
 }
 
 // ==================== 行星球体 ====================
@@ -290,15 +290,27 @@ function buildPlanet(planet, scenePos) {
   return mesh;
 }
 
+// ==================== 行星标签 ====================
+function buildLabel(planet, scenePos) {
+  const ctn = document.getElementById('labels-container');
+  const div = document.createElement('div');
+  div.className = 'planet-label';
+  const hex = '#' + planet.color.toString(16).padStart(6, '0');
+  const auDist = planet.a.toFixed(2);
+  div.innerHTML = `<div class="pname" style="color:${hex}">${planet.name}</div><div class="au">${auDist} AU</div>`;
+  ctn.appendChild(div);
+  const offsetPos = scenePos.clone();
+  offsetPos.y += planet.displayRadius + 0.6;
+  labelData.push({ el: div, pos: offsetPos });
+}
+
 // ==================== 构建 ====================
-const orbitLines = [];
 for (const p of PLANETS) {
-  const line = buildOrbitLine(p);
-  scene.add(line);
-  orbitLines.push(line);
+  scene.add(buildOrbitLine(p));
   const ecl = eclipticPos(p, j2000Days);
   const pos = toScene(ecl);
   buildPlanet(p, pos);
+  buildLabel(p, pos);
 }
 
 // 日期显示
@@ -331,8 +343,6 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  const res = new THREE.Vector2(window.innerWidth, window.innerHeight);
-  for (const line of orbitLines) line.material.resolution.copy(res);
 });
 
 // ==================== 渲染 ====================
