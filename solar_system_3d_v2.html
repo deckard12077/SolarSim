@@ -68,6 +68,9 @@ canvas { display: block; }
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
 // ==================== 常量 ====================
 const AU = 5;                           // 1 AU = 5 场景单位
@@ -246,11 +249,11 @@ const labelData = [];
   }
 })();
 
-// ==================== 轨道线 (开普勒椭圆) ====================
+// ==================== 轨道线 (开普勒椭圆, Line2粗线) ====================
 function buildOrbitLine(planet) {
   const { a, e, i, Omega, omega } = planet;
   const N = 512;
-  const pts = [];
+  const positions = [];
   const w = omega * DEG, O = Omega * DEG, inc = i * DEG;
   const cw = Math.cos(w), sw = Math.sin(w);
   const cO = Math.cos(O), sO = Math.sin(O);
@@ -270,13 +273,19 @@ function buildOrbitLine(planet) {
     const ye = (sO*cw + cO*sw*ci)*xo + (-sO*sw + cO*cw*ci)*yo;
     const ze = (sw*si)*xo + (cw*si)*yo;
 
-    pts.push(new THREE.Vector3(xe * AU, ze * AU, -ye * AU));
+    positions.push(xe * AU, ze * AU, -ye * AU);
   }
 
-  return new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.LineBasicMaterial({ color: planet.orbitColor, transparent: true, opacity: 0.55 })
-  );
+  const geo = new LineGeometry();
+  geo.setPositions(positions);
+  const mat = new LineMaterial({
+    color: planet.orbitColor,
+    linewidth: 2.5,
+    transparent: true,
+    opacity: 0.7,
+    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
+  });
+  return new Line2(geo, mat);
 }
 
 // ==================== 行星球体 ====================
@@ -305,8 +314,11 @@ function buildLabel(planet, scenePos) {
 }
 
 // ==================== 构建 ====================
+const orbitLines = [];
 for (const p of PLANETS) {
-  scene.add(buildOrbitLine(p));
+  const line = buildOrbitLine(p);
+  scene.add(line);
+  orbitLines.push(line);
   const ecl = eclipticPos(p, j2000Days);
   const pos = toScene(ecl);
   buildPlanet(p, pos);
@@ -343,6 +355,8 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  const res = new THREE.Vector2(window.innerWidth, window.innerHeight);
+  for (const line of orbitLines) line.material.resolution.copy(res);
 });
 
 // ==================== 渲染 ====================
