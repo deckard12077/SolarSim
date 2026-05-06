@@ -3,90 +3,58 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>太阳系三维模拟</title>
+<title>太阳系三维模拟2</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #000; overflow: hidden; font-family: "Microsoft YaHei","SimHei",sans-serif; }
+body { background: #050810; overflow: hidden; font-family: "Microsoft YaHei","SimHei",sans-serif; }
 canvas { display: block; }
 
-#panel {
-  position: fixed; top: 12px; left: 12px;
-  background: rgba(10,14,28,0.88); border: 1px solid rgba(80,120,255,0.15);
-  border-radius: 10px; padding: 14px 18px; color: #bbb; font-size: 13px;
-  line-height: 1.85; backdrop-filter: blur(6px); min-width: 210px;
+#info {
+  position: fixed; top: 16px; left: 16px;
+  background: rgba(8,12,24,0.88); border: 1px solid rgba(80,120,255,0.15);
+  border-radius: 10px; padding: 14px 20px; color: #bbb; font-size: 13px;
+  line-height: 1.85; backdrop-filter: blur(6px); min-width: 230px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.5); user-select: none;
 }
-#panel .title { color: #ffdc64; font-size: 16px; font-weight: bold; margin-bottom: 2px; }
-#panel .sep { color: #444; letter-spacing: 2px; }
-#panel .key { color: #8ab4f8; }
-#panel .val { color: #fff; float: right; }
-#panel button {
-  background: rgba(60,80,140,0.3); border: 1px solid rgba(100,140,255,0.2);
-  color: #ccc; border-radius: 5px; padding: 3px 10px; cursor: pointer;
-  font-size: 12px; margin: 0 2px;
-}
-#panel button:hover { background: rgba(80,110,180,0.4); }
-#panel button.active { background: rgba(100,140,255,0.35); color: #fff; }
+#info .title { color: #ffdc64; font-size: 16px; font-weight: bold; }
+#info .sub { color: #888; font-size: 12px; margin-top: 2px; }
+#info .sep { color: #444; letter-spacing: 2px; }
+#info .key { color: #8ab4f8; }
+#info .date { color: #aaa; font-size: 11px; margin-top: 6px; }
 
-#tooltip {
-  position: fixed; display: none; background: rgba(10,14,28,0.92);
-  border: 2px solid var(--pc, #666); border-radius: 8px; padding: 10px 14px;
-  color: #eee; font-size: 13px; line-height: 1.7; pointer-events: none;
-  white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+.planet-label {
+  position: absolute; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 0 6px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,0.8);
+  transform: translate(-50%, -100%); padding-bottom: 4px;
+  text-align: center; line-height: 1.35;
 }
-#tooltip .pname { font-size: 15px; font-weight: bold; color: var(--pc, #fff); }
+.planet-label .pname { font-size: 12px; font-weight: bold; }
+.planet-label .au { color: #999; font-size: 10px; }
 
-#nowebgl {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: #111; color: #f44; font-size: 22px; text-align: center; padding: 40px;
+.au-label {
+  position: absolute; color: #333355; font-size: 10px;
+  pointer-events: none; transform: translate(4px, -50%);
 }
 </style>
 </head>
 <body>
 
-<div id="panel">
-  <div class="title">太阳系三维模拟</div>
-  <div><span class="key">时间流速</span><span class="val" id="speedVal">10 天/秒</span></div>
-  <div><span class="key">已过天数</span><span class="val" id="daysVal">0</span></div>
-  <div class="sep">─────────────</div>
-  <div>
-    <button id="btnSlower">-</button>
-    <button id="btnPause">暂停</button>
-    <button id="btnFaster">+</button>
-    <button id="btnReset">重置</button>
-  </div>
-  <div style="margin-top:4px">
-    <button id="btnS1">1天/秒</button>
-    <button id="btnS2">10天</button>
-    <button id="btnS3">1年</button>
-  </div>
-  <div class="sep">─────────────</div>
+<div id="info">
+  <div class="title">太阳系轨道图</div>
+  <div class="sub">八大行星运动轨迹 · J2000真实轨道根数</div>
+  <div class="sep">───────────────</div>
+  <div><span class="key">比例</span> 线性AU（1 AU = 5 单位）</div>
+  <div><span class="key">轨道</span> 开普勒椭圆（含偏心率）</div>
+  <div class="sep">───────────────</div>
   <div><span class="key">左键拖拽</span> 旋转</div>
   <div><span class="key">右键拖拽</span> 平移</div>
-  <div><span class="key">滚轮</span> 缩放</div>
+  <div><span class="key">滚轮</span> 缩放（放大看内行星）</div>
   <div><span class="key">空格</span> 重置视角</div>
-  <div><span class="key">P</span> 暂停/继续</div>
-  <div><span class="key">点击行星</span> 聚焦</div>
-  <div><span class="key">1</span> 旅行者1号轨迹</div>
+  <div class="date" id="dateInfo"></div>
 </div>
 
-<div id="voyagerInfo" style="display:none; position:absolute; top:10px; right:10px;
-  background:rgba(0,20,10,0.85); color:#44ff88; padding:10px 16px; border-radius:8px;
-  font:13px/1.6 monospace; pointer-events:none; border:1px solid #226644; max-width:280px">
-  <div style="font-size:15px;color:#66ffaa;margin-bottom:4px">旅行者1号</div>
-  <div id="voyagerDate">发射日期: 1977-09-05</div>
-  <div id="voyagerEvent">事件: 等待发射...</div>
-  <div id="voyagerDist">距太阳: 1.0 AU</div>
-  <div style="margin-top:6px;font-size:11px;color:#448866">再按 1 关闭 | 空格重置</div>
-</div>
-
-<div id="tooltip">
-  <div class="pname" id="tipName"></div>
-  <div id="tipInfo"></div>
-</div>
+<div id="labels-container"></div>
 
 <script type="importmap">
 {
@@ -101,1511 +69,289 @@ canvas { display: block; }
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// ==================== WebGL 检测 ====================
-if (!WebGLRenderingContext) {
-  document.getElementById('nowebgl').style.display = 'flex';
-  throw new Error('WebGL not supported');
-}
-const testCanvas = document.createElement('canvas');
-const testGL = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl');
-if (!testGL) {
-  document.getElementById('nowebgl').style.display = 'flex';
-  throw new Error('WebGL context creation failed');
-}
-
-// ==================== 天体数据配置 ====================
-// J2000 历元: 2000-01-01T12:00:00Z
-const J2000 = new Date('2000-01-01T12:00:00Z').getTime();
+// ==================== 常量 ====================
+const AU = 5;                           // 1 AU = 5 场景单位
+const J2000_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
 const MS_PER_DAY = 86400000;
+const DEG = Math.PI / 180;
+const j2000Days = (Date.now() - J2000_MS) / MS_PER_DAY;
 
-// 真实轨道距离(AU)和显示用参数
-// auDistance: 真实半长轴(AU)
-// orbitRadius: 默认sqrt缩放显示半径(场景单位)
-// voyagerRadius: 旅行者模式下线性比例的显示半径(场景单位, 1AU=5)
-const AU = 5; // 旅行者模式: 1 AU = 5 场景单位
-
-const PLANET_DATA = [
+// ==================== 八大行星 J2000 轨道根数 ====================
+// a: 半长轴(AU), e: 偏心率, i: 轨道倾角(°)
+// Omega: 升交点经度(°), omega: 近日点幅角(°)
+// M0: J2000平近点角(°), period: 公转周期(天)
+const PLANETS = [
   {
-    name: '水星', auDistance: 0.387, radius: 0.9, orbitRadius: 20, orbitDays: 87.97,
-    rotationHours: 1407.6, axialTilt: 0.034, color: 0xb8a88e,
-    phaseOffsetDeg: 252.25, moons: []
+    name: '水星', a: 0.38710, e: 0.20563, i: 7.005,
+    Omega: 48.331, omega: 29.124, M0: 174.796, period: 87.969,
+    displayRadius: 0.35, color: 0xb8a88e, orbitColor: 0x887766
   },
   {
-    name: '金星', auDistance: 0.723, radius: 1.5, orbitRadius: 27, orbitDays: 224.7,
-    rotationHours: -5832.5, axialTilt: 177.4, color: 0xf5da7a,
-    phaseOffsetDeg: 181.98, moons: []
+    name: '金星', a: 0.72333, e: 0.00677, i: 3.395,
+    Omega: 76.680, omega: 54.884, M0: 50.416, period: 224.701,
+    displayRadius: 0.55, color: 0xf5da7a, orbitColor: 0xaa9944
   },
   {
-    name: '地球', auDistance: 1.0, radius: 1.6, orbitRadius: 32, orbitDays: 365.25,
-    rotationHours: 23.93, axialTilt: 23.44, color: 0x55bbff,
-    phaseOffsetDeg: 100.46,
-    moons: [
-      { name: '月球', radius: 0.35, orbitRadius: 3.5, orbitDays: 27.32, color: 0xaaaaaa, phaseOffsetDeg: 0 }
-    ]
+    name: '地球', a: 1.00000, e: 0.01671, i: 0.000,
+    Omega: -11.261, omega: 114.208, M0: 357.517, period: 365.256,
+    displayRadius: 0.60, color: 0x55bbff, orbitColor: 0x4488aa
   },
   {
-    name: '火星', auDistance: 1.524, radius: 1.1, orbitRadius: 40, orbitDays: 687.0,
-    rotationHours: 24.62, axialTilt: 25.19, color: 0xee6633,
-    phaseOffsetDeg: 355.45,
-    moons: [
-      { name: '火卫一', radius: 0.15, orbitRadius: 2.2, orbitDays: 0.319, color: 0x998877, phaseOffsetDeg: 0 },
-      { name: '火卫二', radius: 0.12, orbitRadius: 3.2, orbitDays: 1.263, color: 0x887766, phaseOffsetDeg: 90 }
-    ]
+    name: '火星', a: 1.52368, e: 0.09341, i: 1.850,
+    Omega: 49.558, omega: 286.502, M0: 19.389, period: 686.980,
+    displayRadius: 0.45, color: 0xee6633, orbitColor: 0xaa4422
   },
   {
-    name: '木星', auDistance: 5.203, radius: 4.5, orbitRadius: 73, orbitDays: 4332.6,
-    rotationHours: 9.93, axialTilt: 3.13, color: 0xe0c070,
-    phaseOffsetDeg: 34.40,
-    moons: [
-      { name: '木卫一', radius: 0.3, orbitRadius: 7.5, orbitDays: 1.769, color: 0xeecc33, phaseOffsetDeg: 0 },
-      { name: '木卫二', radius: 0.26, orbitRadius: 9.0, orbitDays: 3.551, color: 0xaabbcc, phaseOffsetDeg: 60 },
-      { name: '木卫三', radius: 0.38, orbitRadius: 10.5, orbitDays: 7.155, color: 0x998877, phaseOffsetDeg: 120 },
-      { name: '木卫四', radius: 0.34, orbitRadius: 12.5, orbitDays: 16.689, color: 0x776655, phaseOffsetDeg: 200 }
-    ]
+    name: '木星', a: 5.20260, e: 0.04839, i: 1.303,
+    Omega: 100.464, omega: 273.867, M0: 20.070, period: 4332.589,
+    displayRadius: 1.80, color: 0xe0c070, orbitColor: 0xaa8833
   },
   {
-    name: '土星', auDistance: 9.537, radius: 3.8, orbitRadius: 99, orbitDays: 10759,
-    rotationHours: 10.66, axialTilt: 26.73, color: 0xecc87a,
-    phaseOffsetDeg: 49.94,
-    ring: { inner: 5.0, outer: 8.5, color: 0xc8b88080 },
-    moons: [
-      { name: '土卫六', radius: 0.38, orbitRadius: 10.5, orbitDays: 15.945, color: 0xddaa55, phaseOffsetDeg: 0 }
-    ]
+    name: '土星', a: 9.55491, e: 0.05415, i: 2.489,
+    Omega: 113.666, omega: 339.392, M0: 317.021, period: 10759.22,
+    displayRadius: 1.55, color: 0xecc87a, orbitColor: 0xaa9944
   },
   {
-    name: '天王星', auDistance: 19.19, radius: 2.6, orbitRadius: 140, orbitDays: 30687,
-    rotationHours: -17.24, axialTilt: 97.77, color: 0x77eeee,
-    phaseOffsetDeg: 313.23,
-    ring: { inner: 3.5, outer: 4.8, color: 0x88aaaa60 },
-    moons: [
-      { name: '天卫三', radius: 0.18, orbitRadius: 5.0, orbitDays: 8.706, color: 0x99aabb, phaseOffsetDeg: 0 }
-    ]
+    name: '天王星', a: 19.2184, e: 0.04717, i: 0.773,
+    Omega: 74.006, omega: 96.998, M0: 142.239, period: 30688.5,
+    displayRadius: 1.10, color: 0x77eeee, orbitColor: 0x4499aa
   },
   {
-    name: '海王星', auDistance: 30.07, radius: 2.5, orbitRadius: 176, orbitDays: 60190,
-    rotationHours: 16.11, axialTilt: 28.32, color: 0x5577ff,
-    phaseOffsetDeg: 304.88,
-    moons: [
-      { name: '海卫一', radius: 0.22, orbitRadius: 5.0, orbitDays: -5.877, color: 0x99aaaa, phaseOffsetDeg: 0 }
-    ]
+    name: '海王星', a: 30.1104, e: 0.00859, i: 1.770,
+    Omega: 131.784, omega: 273.187, M0: 256.228, period: 60182.0,
+    displayRadius: 1.05, color: 0x5577ff, orbitColor: 0x3355aa
   }
 ];
 
-// ==================== 计算初始相位角 ====================
-function calcInitialAngle(orbitDays, phaseOffsetDeg) {
-  const now = Date.now();
-  const dtDays = (now - J2000) / MS_PER_DAY;
-  // 严格按规格: theta = 2π * frac(Δt / orbitalPeriodDays + phaseOffset)
-  // phaseOffsetDeg 转为圈数比例
-  const frac = ((dtDays / orbitDays + phaseOffsetDeg / 360) % 1 + 1) % 1;
-  return frac * Math.PI * 2;
+// ==================== 开普勒方程求解 (Newton-Raphson) ====================
+function solveKepler(M, e) {
+  M = ((M % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  let E = M;
+  for (let k = 0; k < 50; k++) {
+    const dE = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    E -= dE;
+    if (Math.abs(dE) < 1e-10) break;
+  }
+  return E;
+}
+
+// ==================== 轨道根数 → 黄道坐标 ====================
+function eclipticPos(planet, days) {
+  const { a, e, i, Omega, omega, M0, period } = planet;
+  const n = 2 * Math.PI / period;
+  const M = M0 * DEG + n * days;
+  const E = solveKepler(M, e);
+  const v = 2 * Math.atan2(
+    Math.sqrt(1 + e) * Math.sin(E / 2),
+    Math.sqrt(1 - e) * Math.cos(E / 2)
+  );
+  const r = a * (1 - e * Math.cos(E));
+  const xo = r * Math.cos(v), yo = r * Math.sin(v);
+
+  const w = omega * DEG, O = Omega * DEG, inc = i * DEG;
+  const cw = Math.cos(w), sw = Math.sin(w);
+  const cO = Math.cos(O), sO = Math.sin(O);
+  const ci = Math.cos(inc), si = Math.sin(inc);
+
+  return {
+    x: (cO*cw - sO*sw*ci)*xo + (-cO*sw - sO*cw*ci)*yo,
+    y: (sO*cw + cO*sw*ci)*xo + (-sO*sw + cO*cw*ci)*yo,
+    z: (sw*si)*xo + (cw*si)*yo
+  };
+}
+
+// 黄道坐标 → Three.js场景 (Y朝上, 黄道面=XZ平面, 北极=+Y)
+function toScene(ecl) {
+  return new THREE.Vector3(ecl.x * AU, ecl.z * AU, -ecl.y * AU);
 }
 
 // ==================== 场景初始化 ====================
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050810);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+const camera = new THREE.PerspectiveCamera(
+  55, window.innerWidth / window.innerHeight, 0.1, 5000
+);
+camera.position.set(0, 300, 80);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
 document.body.appendChild(renderer.domElement);
-
-// 检查 WebGL
-if (!renderer.capabilities.isWebGL2) {
-  // WebGL1 also works, just note it
-}
-
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 5000);
-camera.position.set(50, 70, 100);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.minDistance = 5;
-controls.maxDistance = 500;
+controls.dampingFactor = 0.06;
 controls.target.set(0, 0, 0);
+controls.minDistance = 3;
+controls.maxDistance = 800;
 
-// ==================== 行星纹理生成 ====================
-function generatePlanetTexture(name, baseColor) {
-  const W = 512, H = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // 解析基色
-  const r = (baseColor >> 16) & 0xff, g = (baseColor >> 8) & 0xff, b = baseColor & 0xff;
-  const base = `rgb(${r},${g},${b})`;
-
-  // 简易噪声
-  function noise(x, y, s) { return (Math.sin(x*12.9898/s + y*78.233/s)*43758.5453) % 1; }
-  function smoothNoise(x, y, s) {
-    const ix = Math.floor(x/s), iy = Math.floor(y/s);
-    const fx = (x/s) - ix, fy = (y/s) - iy;
-    const a = noise(ix,iy,1), b2 = noise(ix+1,iy,1), c = noise(ix,iy+1,1), d = noise(ix+1,iy+1,1);
-    return a*(1-fx)*(1-fy) + b2*fx*(1-fy) + c*(1-fx)*fy + d*fx*fy;
-  }
-
-  switch(name) {
-    case '水星': {
-      // 灰色基底+陨石坑
-      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
-      for (let i = 0; i < 120; i++) {
-        const cx = Math.random()*W, cy = Math.random()*H, cr = 2+Math.random()*12;
-        const shade = 0.6 + Math.random()*0.3;
-        ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2);
-        ctx.fillStyle = `rgba(${Math.floor(r*shade)},${Math.floor(g*shade)},${Math.floor(b*shade)},0.6)`;
-        ctx.fill();
-        ctx.beginPath(); ctx.arc(cx-1,cy-1,cr*0.7,0,Math.PI*2);
-        ctx.fillStyle = `rgba(${Math.floor(r*shade*1.2)},${Math.floor(g*shade*1.2)},${Math.floor(b*shade*1.2)},0.4)`;
-        ctx.fill();
-      }
-      break;
-    }
-    case '金星': {
-      // 黄色旋涡云层
-      const imgData = ctx.createImageData(W, H);
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const v = smoothNoise(x, y, 40) * 0.5 + smoothNoise(x, y, 15) * 0.3 + smoothNoise(x, y, 6) * 0.2;
-          const i = (y*W+x)*4;
-          imgData.data[i]   = Math.min(255, r + (v-0.5)*60);
-          imgData.data[i+1] = Math.min(255, g + (v-0.5)*50);
-          imgData.data[i+2] = Math.min(255, b + (v-0.5)*40);
-          imgData.data[i+3] = 255;
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-      // 漩涡条纹
-      for (let i = 0; i < 8; i++) {
-        const yy = H*0.1 + Math.random()*H*0.8;
-        ctx.beginPath();
-        ctx.moveTo(0, yy);
-        for (let x = 0; x < W; x += 20) {
-          ctx.lineTo(x, yy + Math.sin(x*0.02+i)*15 + Math.sin(x*0.05)*8);
-        }
-        ctx.strokeStyle = `rgba(${r+30},${g+20},${b},0.25)`;
-        ctx.lineWidth = 6 + Math.random()*8;
-        ctx.stroke();
-      }
-      break;
-    }
-    case '地球': {
-      // 蓝色海洋底
-      ctx.fillStyle = '#1a5fa0'; ctx.fillRect(0,0,W,H);
-      // 大陆块
-      const continents = [
-        {x:120,y:70,rx:50,ry:45}, // 欧亚
-        {x:150,y:65,rx:35,ry:30}, // 亚洲延伸
-        {x:130,y:130,rx:25,ry:35}, // 非洲
-        {x:350,y:80,rx:45,ry:50}, // 北美
-        {x:360,y:150,rx:25,ry:40}, // 南美
-        {x:430,y:190,rx:35,ry:25}, // 澳洲
-        {x:256,y:240,rx:120,ry:25}, // 南极
-        {x:256,y:10,rx:100,ry:15}, // 北极冰
-      ];
-      for (const c of continents) {
-        const grad = ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,Math.max(c.rx,c.ry));
-        grad.addColorStop(0, '#3a8a30');
-        grad.addColorStop(0.5, '#4a7a28');
-        grad.addColorStop(0.8, '#6a9a40');
-        grad.addColorStop(1, 'rgba(100,150,60,0)');
-        ctx.beginPath(); ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
-        ctx.fillStyle = grad; ctx.fill();
-      }
-      // 沙漠区
-      for (const c of [{x:140,y:110,rx:20,ry:10},{x:390,y:110,rx:15,ry:10}]) {
-        ctx.beginPath(); ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
-        ctx.fillStyle = 'rgba(180,160,100,0.5)'; ctx.fill();
-      }
-      // 云层
-      for (let i = 0; i < 20; i++) {
-        const cx = Math.random()*W, cy = Math.random()*H;
-        ctx.beginPath(); ctx.ellipse(cx,cy,20+Math.random()*40,6+Math.random()*12,Math.random()*0.5,0,Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill();
-      }
-      break;
-    }
-    case '火星': {
-      // 红橙基底
-      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
-      const imgData = ctx.getImageData(0,0,W,H);
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const v = smoothNoise(x,y,30)*0.4 + smoothNoise(x,y,10)*0.3 + smoothNoise(x,y,4)*0.3;
-          const i = (y*W+x)*4;
-          imgData.data[i]   = Math.min(255, Math.max(0, r + (v-0.5)*80));
-          imgData.data[i+1] = Math.min(255, Math.max(0, g + (v-0.5)*60));
-          imgData.data[i+2] = Math.min(255, Math.max(0, b + (v-0.5)*40));
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-      // 暗色斑块
-      for (let i = 0; i < 15; i++) {
-        const cx = Math.random()*W, cy = 30+Math.random()*(H-60), crx = 15+Math.random()*35, cry = 10+Math.random()*20;
-        ctx.beginPath(); ctx.ellipse(cx,cy,crx,cry,0,0,Math.PI*2);
-        ctx.fillStyle = 'rgba(100,40,20,0.3)'; ctx.fill();
-      }
-      // 极冠
-      ctx.beginPath(); ctx.ellipse(256,8,60,12,0,0,Math.PI*2);
-      ctx.fillStyle = 'rgba(230,220,210,0.6)'; ctx.fill();
-      ctx.beginPath(); ctx.ellipse(256,H-5,50,10,0,0,Math.PI*2);
-      ctx.fillStyle = 'rgba(230,220,210,0.5)'; ctx.fill();
-      break;
-    }
-    case '木星': {
-      // 水平条带
-      const bandColors = [
-        [200,170,100],[180,140,80],[220,190,120],[160,120,70],
-        [210,180,110],[190,150,85],[230,200,130],[170,130,75],
-        [200,165,95],[180,145,90],[215,185,115],[165,125,70],
-        [205,175,105],[185,150,88],[225,195,125],[175,135,80],
-      ];
-      const bandH = H / bandColors.length;
-      for (let i = 0; i < bandColors.length; i++) {
-        const [br,bg,bb] = bandColors[i];
-        ctx.fillStyle = `rgb(${br},${bg},${bb})`;
-        ctx.fillRect(0, i*bandH, W, bandH+1);
-      }
-      // 条带波动
-      const imgData = ctx.getImageData(0,0,W,H);
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const v = smoothNoise(x,y,20)*0.5 + smoothNoise(x,y,8)*0.3;
-          const i = (y*W+x)*4;
-          imgData.data[i]   = Math.min(255, Math.max(0, imgData.data[i] + (v-0.5)*40));
-          imgData.data[i+1] = Math.min(255, Math.max(0, imgData.data[i+1] + (v-0.5)*30));
-          imgData.data[i+2] = Math.min(255, Math.max(0, imgData.data[i+2] + (v-0.5)*20));
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-      // 大红斑
-      ctx.beginPath(); ctx.ellipse(320, 145, 28, 16, 0.1, 0, Math.PI*2);
-      const grs = ctx.createRadialGradient(320,145,0,320,145,28);
-      grs.addColorStop(0, 'rgba(200,80,50,0.8)');
-      grs.addColorStop(0.6, 'rgba(180,90,60,0.5)');
-      grs.addColorStop(1, 'rgba(180,120,70,0)');
-      ctx.fillStyle = grs; ctx.fill();
-      break;
-    }
-    case '土星': {
-      // 淡金条带
-      const bandColors = [
-        [220,200,140],[200,180,120],[230,210,150],[190,170,110],
-        [215,195,135],[205,185,125],[225,205,145],[195,175,115],
-        [220,200,140],[200,180,120],[230,210,150],[190,170,110],
-      ];
-      const bandH = H / bandColors.length;
-      for (let i = 0; i < bandColors.length; i++) {
-        const [br,bg,bb] = bandColors[i];
-        ctx.fillStyle = `rgb(${br},${bg},${bb})`;
-        ctx.fillRect(0, i*bandH, W, bandH+1);
-      }
-      // 柔化
-      const imgData = ctx.getImageData(0,0,W,H);
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const v = smoothNoise(x,y,25)*0.4 + smoothNoise(x,y,10)*0.3;
-          const i = (y*W+x)*4;
-          imgData.data[i]   = Math.min(255, Math.max(0, imgData.data[i] + (v-0.5)*30));
-          imgData.data[i+1] = Math.min(255, Math.max(0, imgData.data[i+1] + (v-0.5)*25));
-          imgData.data[i+2] = Math.min(255, Math.max(0, imgData.data[i+2] + (v-0.5)*15));
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-      break;
-    }
-    case '天王星': {
-      // 青色淡条带
-      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
-      const imgData = ctx.getImageData(0,0,W,H);
-      for (let y = 0; y < H; y++) {
-        const band = Math.sin(y * 0.15) * 12;
-        for (let x = 0; x < W; x++) {
-          const v = smoothNoise(x,y,30)*0.3;
-          const i = (y*W+x)*4;
-          imgData.data[i]   = Math.min(255, Math.max(0, r + band + (v-0.5)*20));
-          imgData.data[i+1] = Math.min(255, Math.max(0, g + band + (v-0.5)*15));
-          imgData.data[i+2] = Math.min(255, Math.max(0, b + band*0.5 + (v-0.5)*10));
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-      break;
-    }
-    case '海王星': {
-      // 深蓝条带+暗斑
-      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
-      const imgData = ctx.getImageData(0,0,W,H);
-      for (let y = 0; y < H; y++) {
-        const band = Math.sin(y * 0.12) * 15;
-        for (let x = 0; x < W; x++) {
-          const v = smoothNoise(x,y,25)*0.3 + smoothNoise(x,y,8)*0.2;
-          const i = (y*W+x)*4;
-          imgData.data[i]   = Math.min(255, Math.max(0, r + band*0.3 + (v-0.5)*20));
-          imgData.data[i+1] = Math.min(255, Math.max(0, g + band*0.5 + (v-0.5)*15));
-          imgData.data[i+2] = Math.min(255, Math.max(0, b + band + (v-0.5)*10));
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-      // 大暗斑
-      ctx.beginPath(); ctx.ellipse(180, 110, 22, 14, -0.2, 0, Math.PI*2);
-      const ndb = ctx.createRadialGradient(180,110,0,180,110,22);
-      ndb.addColorStop(0, 'rgba(20,40,120,0.6)');
-      ndb.addColorStop(0.7, 'rgba(40,60,150,0.3)');
-      ndb.addColorStop(1, 'rgba(60,80,180,0)');
-      ctx.fillStyle = ndb; ctx.fill();
-      break;
-    }
-    default: {
-      ctx.fillStyle = base; ctx.fillRect(0,0,W,H);
-    }
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  return tex;
-}
+const DEFAULT_CAM = camera.position.clone();
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
 // ==================== 光照 ====================
-const sunLight = new THREE.PointLight(0xfff0d0, 2.5, 800, 0.4);
-sunLight.position.set(0, 0, 0);
-scene.add(sunLight);
-
-const ambientLight = new THREE.AmbientLight(0x222233, 0.15);
-scene.add(ambientLight);
+scene.add(new THREE.PointLight(0xffffff, 2.5, 2000, 0.3));
+scene.add(new THREE.AmbientLight(0x222244, 0.6));
 
 // ==================== 太阳 ====================
-function createSun() {
-  const group = new THREE.Group();
-
-  // 太阳本体
-  const geo = new THREE.SphereGeometry(4, 48, 48);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.renderOrder = 0;
-  group.add(mesh);
-
-  // 外光晕 sprite（仅用 sprite 实现光晕，避免深度冲突）
-  const spriteTex = createGlowTexture();
-  const spriteMat = new THREE.SpriteMaterial({
-    map: spriteTex, color: 0xffcc44,
-    transparent: true, blending: THREE.AdditiveBlending, opacity: 0.5,
-    depthWrite: false
-  });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(24, 24, 1);
-  sprite.renderOrder = -1;
-  group.add(sprite);
-
-  scene.add(group);
-  return { group, mesh };
-}
-
-function createGlowTexture() {
-  const size = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = size; canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  const cx = size / 2;
-  const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx);
+(function() {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(
+    new THREE.SphereGeometry(1.5, 32, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffdd44 })
+  ));
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
   grad.addColorStop(0, 'rgba(255,230,120,1)');
   grad.addColorStop(0.15, 'rgba(255,200,60,0.6)');
   grad.addColorStop(0.4, 'rgba(255,140,20,0.15)');
   grad.addColorStop(1, 'rgba(255,100,0,0)');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, size, size);
-  const tex = new THREE.CanvasTexture(canvas);
-  return tex;
-}
+  ctx.fillRect(0, 0, 256, 256);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(c), color: 0xffcc44,
+    transparent: true, blending: THREE.AdditiveBlending,
+    opacity: 0.4, depthWrite: false
+  }));
+  glow.scale.set(14, 14, 1);
+  g.add(glow);
+  scene.add(g);
+})();
 
-// ==================== 星空背景 ====================
-function createStarField() {
-  const count = 6000;
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  const sizes = new Float32Array(count);
+// ==================== AU 参考圈 ====================
+const labelData = [];
 
-  for (let i = 0; i < count; i++) {
-    // 随机球面分布
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    const r = 800 + Math.random() * 400;
-    positions[i*3]   = r * Math.sin(phi) * Math.cos(theta);
-    positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i*3+2] = r * Math.cos(phi);
-
-    const brightness = 0.5 + Math.random() * 0.5;
-    const tint = Math.random();
-    if (tint < 0.1) { // 蓝星
-      colors[i*3] = brightness * 0.7; colors[i*3+1] = brightness * 0.8; colors[i*3+2] = brightness;
-    } else if (tint < 0.15) { // 红星
-      colors[i*3] = brightness; colors[i*3+1] = brightness * 0.7; colors[i*3+2] = brightness * 0.5;
-    } else { // 白星
-      colors[i*3] = brightness; colors[i*3+1] = brightness; colors[i*3+2] = brightness * 0.95;
+(function() {
+  const auVals = [1, 2, 5, 10, 20, 30];
+  const ctn = document.getElementById('labels-container');
+  for (const au of auVals) {
+    const r = au * AU;
+    const pts = [];
+    for (let j = 0; j <= 128; j++) {
+      const a = (j / 128) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
     }
-    sizes[i] = 0.5 + Math.random() * 1.5;
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-  const mat = new THREE.PointsMaterial({
-    size: 1.2, vertexColors: true, sizeAttenuation: true,
-    transparent: true, opacity: 0.9
-  });
-
-  scene.add(new THREE.Points(geo, mat));
-}
-
-// ==================== 轨道线 ====================
-function createOrbitLine(radius, color = 0x4466aa) {
-  const segments = 128;
-  const points = [];
-  for (let i = 0; i <= segments; i++) {
-    const angle = (i / segments) * Math.PI * 2;
-    points.push(new THREE.Vector3(
-      Math.cos(angle) * radius, 0, Math.sin(angle) * radius
+    scene.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: 0x1a1a33, transparent: true, opacity: 0.4 })
     ));
+    const lbl = document.createElement('div');
+    lbl.className = 'au-label';
+    lbl.textContent = au + ' AU';
+    ctn.appendChild(lbl);
+    labelData.push({ el: lbl, pos: new THREE.Vector3(r + 2, 0, 0) });
   }
-  const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 });
-  return new THREE.Line(geo, mat);
+})();
+
+// ==================== 轨道线 (开普勒椭圆) ====================
+function buildOrbitLine(planet) {
+  const { a, e, i, Omega, omega } = planet;
+  const N = 512;
+  const pts = [];
+  const w = omega * DEG, O = Omega * DEG, inc = i * DEG;
+  const cw = Math.cos(w), sw = Math.sin(w);
+  const cO = Math.cos(O), sO = Math.sin(O);
+  const ci = Math.cos(inc), si = Math.sin(inc);
+
+  for (let j = 0; j <= N; j++) {
+    const M = (j / N) * 2 * Math.PI;
+    const E = solveKepler(M, e);
+    const v = 2 * Math.atan2(
+      Math.sqrt(1 + e) * Math.sin(E / 2),
+      Math.sqrt(1 - e) * Math.cos(E / 2)
+    );
+    const r = a * (1 - e * Math.cos(E));
+    const xo = r * Math.cos(v), yo = r * Math.sin(v);
+
+    const xe = (cO*cw - sO*sw*ci)*xo + (-cO*sw - sO*cw*ci)*yo;
+    const ye = (sO*cw + cO*sw*ci)*xo + (-sO*sw + cO*cw*ci)*yo;
+    const ze = (sw*si)*xo + (cw*si)*yo;
+
+    pts.push(new THREE.Vector3(xe * AU, ze * AU, -ye * AU));
+  }
+
+  return new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: planet.orbitColor, transparent: true, opacity: 0.55 })
+  );
 }
 
-// ==================== 行星环 ====================
-function createRing(innerR, outerR, colorHex) {
-  const geo = new THREE.RingGeometry(innerR, outerR, 64);
-  // 修正 UV 让环有渐变
-  const pos = geo.attributes.position;
-  const uv = geo.attributes.uv;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), z = pos.getZ(i);
-    const d = Math.sqrt(x*x + z*z);
-    uv.setXY(i, (d - innerR) / (outerR - innerR), 0.5);
-  }
-
-  const mat = new THREE.MeshBasicMaterial({
-    color: colorHex, side: THREE.DoubleSide,
-    transparent: true, opacity: 0.55
-  });
-  return new THREE.Mesh(geo, mat);
+// ==================== 行星球体 ====================
+function buildPlanet(planet, scenePos) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(planet.displayRadius, 32, 32),
+    new THREE.MeshStandardMaterial({ color: planet.color, roughness: 0.7, metalness: 0.1 })
+  );
+  mesh.position.copy(scenePos);
+  scene.add(mesh);
+  return mesh;
 }
 
-// ==================== 创建行星及卫星 ====================
-const planetObjects = [];
-
-function createPlanet(data) {
-  const orbitGroup = new THREE.Group(); // 绕太阳公转
-  const bodyGroup = new THREE.Group();  // 行星本体+自转
-
-  // 初始相位角
-  const initAngle = calcInitialAngle(data.orbitDays, data.phaseOffsetDeg);
-
-  // 公转位置
-  orbitGroup.rotation.y = initAngle;
-
-  // 行星本体
-  const geo = new THREE.SphereGeometry(data.radius, 32, 32);
-  const texture = generatePlanetTexture(data.name, data.color);
-  const mat = new THREE.MeshStandardMaterial({
-    map: texture, roughness: 0.7, metalness: 0.1,
-    emissive: data.color, emissiveIntensity: 0.08
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  bodyGroup.add(mesh);
-
-  // 自转轴倾斜
-  const tiltRad = (data.axialTilt || 0) * Math.PI / 180;
-  bodyGroup.rotation.z = tiltRad;
-
-  // 行星环
-  if (data.ring) {
-    const ring = createRing(data.ring.inner, data.ring.outer, data.ring.color);
-    ring.rotation.x = -Math.PI / 2; // 平躺到赤道面
-    bodyGroup.add(ring);
-  }
-
-  // 位置偏移到轨道半径
-  bodyGroup.position.x = data.orbitRadius;
-
-  orbitGroup.add(bodyGroup);
-
-  // 轨道线
-  const orbitLine = createOrbitLine(data.orbitRadius);
-  scene.add(orbitLine);
-
-  // 卫星
-  const moonObjects = [];
-  for (const mData of (data.moons || [])) {
-    const moonOrbitGroup = new THREE.Group();
-    const moonInitAngle = calcInitialAngle(Math.abs(mData.orbitDays), mData.phaseOffsetDeg || 0);
-    moonOrbitGroup.rotation.y = moonInitAngle;
-
-    const moonGeo = new THREE.SphereGeometry(mData.radius, 16, 16);
-    const moonMat = new THREE.MeshStandardMaterial({
-      color: mData.color, roughness: 0.8, metalness: 0.05
-    });
-    const moonMesh = new THREE.Mesh(moonGeo, moonMat);
-    moonMesh.position.x = mData.orbitRadius;
-    moonOrbitGroup.add(moonMesh);
-
-    // 卫星轨道线
-    const moonOrbitLine = createOrbitLine(mData.orbitRadius, 0x335588);
-    bodyGroup.add(moonOrbitLine);
-
-    bodyGroup.add(moonOrbitGroup);
-    moonObjects.push({ orbitGroup: moonOrbitGroup, mesh: moonMesh, data: mData, initAngle: moonInitAngle });
-  }
-
-  scene.add(orbitGroup);
-
-  return {
-    orbitGroup, bodyGroup, mesh, data, initAngle, orbitLine,
-    moonObjects,
-    worldPos: new THREE.Vector3()
-  };
-}
-
-// ==================== 小行星带 ====================
-// 真实范围: 2.1-3.3 AU (火星1.524AU ~ 木星5.203AU之间)
-const ASTEROID_BELT = {
-  auInner: 2.1,
-  auOuter: 3.3,
-  count: 3000,
-  // sqrt缩放下的显示半径范围(与行星轨道半径一致的计算方式)
-  get displayInner() { return Math.sqrt(this.auInner) * 32; }, // ≈46.4
-  get displayOuter() { return Math.sqrt(this.auOuter) * 32; }, // ≈58.1
-  orbitDaysRange: [1200, 3000], // 平均公转周期范围(天)
-};
-
-let asteroidBelt = null; // THREE.Points
-let asteroidAngles = null; // 每颗小行星的当前角度
-
-function createAsteroidBelt() {
-  const count = ASTEROID_BELT.count;
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  const sizes = new Float32Array(count);
-  asteroidAngles = new Float32Array(count); // 存储每颗的角度
-  const radii = new Float32Array(count); // 存储每颗的轨道半径
-
-  for (let i = 0; i < count; i++) {
-    // 随机轨道半径(偏向内带更密集——与真实分布吻合)
-    const t = Math.random();
-    const r = ASTEROID_BELT.displayInner + (ASTEROID_BELT.displayOuter - ASTEROID_BELT.displayInner) * Math.pow(t, 0.7);
-
-    // 随机初始角度
-    const angle = Math.random() * Math.PI * 2;
-    asteroidAngles[i] = angle;
-    radii[i] = r;
-
-    // 轻微y轴偏移(小行星带不完全在黄道面上, 倾角约±20°)
-    const yOffset = (Math.random() - 0.5) * 3;
-
-    positions[i * 3]     = Math.cos(angle) * r;
-    positions[i * 3 + 1] = yOffset;
-    positions[i * 3 + 2] = Math.sin(angle) * r;
-
-    // 颜色: 灰褐色为主(C型小行星), 偶有浅色(S型)
-    const colorType = Math.random();
-    if (colorType < 0.6) { // C型: 暗灰
-      const b = 0.35 + Math.random() * 0.15;
-      colors[i * 3] = b; colors[i * 3 + 1] = b * 0.95; colors[i * 3 + 2] = b * 0.9;
-    } else if (colorType < 0.85) { // S型: 浅灰褐
-      const b = 0.5 + Math.random() * 0.2;
-      colors[i * 3] = b; colors[i * 3 + 1] = b * 0.92; colors[i * 3 + 2] = b * 0.85;
-    } else { // M型: 微金属光泽
-      const b = 0.55 + Math.random() * 0.15;
-      colors[i * 3] = b; colors[i * 3 + 1] = b * 0.96; colors[i * 3 + 2] = b * 0.92;
-    }
-
-    sizes[i] = 0.3 + Math.random() * 0.8;
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-  // 存储半径到userData, 供模式切换时使用
-  geo.userData = { radii, yOffset: new Float32Array(count) };
-  for (let i = 0; i < count; i++) {
-    geo.userData.yOffset[i] = (Math.random() - 0.5) * 3;
-  }
-
-  const mat = new THREE.PointsMaterial({
-    size: 0.8,
-    vertexColors: true,
-    sizeAttenuation: true,
-    transparent: true,
-    opacity: 0.75
-  });
-
-  asteroidBelt = new THREE.Points(geo, mat);
-  scene.add(asteroidBelt);
-
-  // 小行星带微光晕环(视觉提示, 非常淡的环形标记)
-  const glowRingInner = ASTEROID_BELT.displayInner - 1;
-  const glowRingOuter = ASTEROID_BELT.displayOuter + 1;
-  const ringGeo = new THREE.RingGeometry(glowRingInner, glowRingOuter, 128);
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: 0x887766,
-    transparent: true,
-    opacity: 0.04,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  });
-  const glowRing = new THREE.Mesh(ringGeo, ringMat);
-  glowRing.rotation.x = -Math.PI / 2; // 平放在黄道面
-  glowRing.userData.isAsteroidGlow = true;
-  scene.add(glowRing);
-}
-
-// 更新小行星带位置(公转动画)
-function updateAsteroidBelt(daysDelta) {
-  if (!asteroidBelt || !asteroidAngles) return;
-
-  const positions = asteroidBelt.geometry.attributes.position.array;
-  const count = ASTEROID_BELT.count;
-  const radii = asteroidBelt.geometry.userData.radii;
-  const yOffsets = asteroidBelt.geometry.userData.yOffset;
-
-  // 小行星带平均公转周期约3-8年, 按半径不同速度不同(开普勒定律)
-  for (let i = 0; i < count; i++) {
-    // 近似公转周期: T ∝ r^1.5 (开普勒第三定律)
-    const rAU = ASTEROID_BELT.auInner + (ASTEROID_BELT.auOuter - ASTEROID_BELT.auInner) *
-      Math.pow((radii[i] - ASTEROID_BELT.displayInner) / (ASTEROID_BELT.displayOuter - ASTEROID_BELT.displayInner), 1 / 0.7);
-    const orbitPeriodDays = Math.pow(rAU, 1.5) * 365.25; // 开普勒第三定律
-    const angularSpeed = (2 * Math.PI / orbitPeriodDays) * daysDelta;
-    asteroidAngles[i] += angularSpeed;
-
-    positions[i * 3]     = Math.cos(asteroidAngles[i]) * radii[i];
-    positions[i * 3 + 1] = yOffsets[i];
-    positions[i * 3 + 2] = Math.sin(asteroidAngles[i]) * radii[i];
-  }
-
-  asteroidBelt.geometry.attributes.position.needsUpdate = true;
-}
-
-// 旅行者模式下重建小行星带(线性AU比例)
-function rebuildAsteroidBeltForVoyager() {
-  if (!asteroidBelt) return;
-  const positions = asteroidBelt.geometry.attributes.position.array;
-  const count = ASTEROID_BELT.count;
-  const yOffsets = asteroidBelt.geometry.userData.yOffset;
-
-  for (let i = 0; i < count; i++) {
-    // 按当前角度重新计算, 半径从sqrt缩放改为线性AU
-    const t = Math.random();
-    const rAU = ASTEROID_BELT.auInner + (ASTEROID_BELT.auOuter - ASTEROID_BELT.auInner) * Math.pow(t, 0.7);
-    const r = rAU * AU; // 线性AU
-    asteroidBelt.geometry.userData.radii[i] = r;
-
-    positions[i * 3]     = Math.cos(asteroidAngles[i]) * r;
-    positions[i * 3 + 1] = yOffsets[i] * (r / ASTEROID_BELT.displayInner); // 按比例放大y偏移
-    positions[i * 3 + 2] = Math.sin(asteroidAngles[i]) * r;
-  }
-
-  asteroidBelt.geometry.attributes.position.needsUpdate = true;
-
-  // 更新微光晕环尺寸
-  const glowRing = scene.children.find(c => c.userData && c.userData.isAsteroidGlow);
-  if (glowRing) {
-    scene.remove(glowRing);
-    const ringGeo = new THREE.RingGeometry(ASTEROID_BELT.auInner * AU - 1, ASTEROID_BELT.auOuter * AU + 1, 128);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x887766, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false,
-    });
-    const newRing = new THREE.Mesh(ringGeo, ringMat);
-    newRing.rotation.x = -Math.PI / 2;
-    newRing.userData.isAsteroidGlow = true;
-    scene.add(newRing);
-  }
-}
-
-// 正常模式恢复小行星带(sqrt缩放)
-function rebuildAsteroidBeltForNormal() {
-  if (!asteroidBelt) return;
-  const positions = asteroidBelt.geometry.attributes.position.array;
-  const count = ASTEROID_BELT.count;
-  const yOffsets = asteroidBelt.geometry.userData.yOffset;
-
-  for (let i = 0; i < count; i++) {
-    // 恢复sqrt缩放半径
-    const t = Math.random();
-    const r = ASTEROID_BELT.displayInner + (ASTEROID_BELT.displayOuter - ASTEROID_BELT.displayInner) * Math.pow(t, 0.7);
-    asteroidBelt.geometry.userData.radii[i] = r;
-
-    positions[i * 3]     = Math.cos(asteroidAngles[i]) * r;
-    positions[i * 3 + 1] = yOffsets[i];
-    positions[i * 3 + 2] = Math.sin(asteroidAngles[i]) * r;
-  }
-
-  asteroidBelt.geometry.attributes.position.needsUpdate = true;
-
-  // 恢复微光晕环尺寸
-  const glowRing = scene.children.find(c => c.userData && c.userData.isAsteroidGlow);
-  if (glowRing) {
-    scene.remove(glowRing);
-    const ringGeo = new THREE.RingGeometry(ASTEROID_BELT.displayInner - 1, ASTEROID_BELT.displayOuter + 1, 128);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x887766, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false,
-    });
-    const newRing = new THREE.Mesh(ringGeo, ringMat);
-    newRing.rotation.x = -Math.PI / 2;
-    newRing.userData.isAsteroidGlow = true;
-    scene.add(newRing);
-  }
+// ==================== 行星标签 ====================
+function buildLabel(planet, scenePos) {
+  const ctn = document.getElementById('labels-container');
+  const div = document.createElement('div');
+  div.className = 'planet-label';
+  const hex = '#' + planet.color.toString(16).padStart(6, '0');
+  const auDist = planet.a.toFixed(2);
+  div.innerHTML = `<div class="pname" style="color:${hex}">${planet.name}</div><div class="au">${auDist} AU</div>`;
+  ctn.appendChild(div);
+  const offsetPos = scenePos.clone();
+  offsetPos.y += planet.displayRadius + 0.6;
+  labelData.push({ el: div, pos: offsetPos });
 }
 
 // ==================== 构建 ====================
-const sun = createSun();
-createStarField();
-createAsteroidBelt();
-
-for (const pData of PLANET_DATA) {
-  planetObjects.push(createPlanet(pData));
+for (const p of PLANETS) {
+  scene.add(buildOrbitLine(p));
+  const ecl = eclipticPos(p, j2000Days);
+  const pos = toScene(ecl);
+  buildPlanet(p, pos);
+  buildLabel(p, pos);
 }
 
-// ==================== 标签（已移除固定名称显示，仅悬停 tooltip） ====================
+// 日期显示
+const now = new Date();
+document.getElementById('dateInfo').textContent =
+  `行星位置: ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
-// ==================== 动画状态 ====================
-let timeSpeed = 10.0; // 天/秒
-let paused = false;
-let elapsedDays = 0;
-const clock = new THREE.Clock();
-
-// ==================== Raycaster 悬停 ====================
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2(-999, -999);
-let hoveredPlanet = null;
-let focusedPlanet = null;
-let focusTransition = 0; // 0=未聚焦, >0 正在过渡
-
-// 重置视角平滑过渡
-let resetTransition = 0; // 0=未重置, >0 正在过渡
-let resetStartCamPos = null;
-let resetStartTarget = null;
-const DEFAULT_CAM_POS = new THREE.Vector3(80, 100, 150);
-const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
-
-renderer.domElement.addEventListener('mousemove', e => {
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-});
-
-// 点击行星聚焦
-renderer.domElement.addEventListener('click', e => {
-  raycaster.setFromCamera(mouse, camera);
-  const allMeshes = planetObjects.map(p => p.mesh);
-  const intersects = raycaster.intersectObjects(allMeshes);
-  if (intersects.length > 0) {
-    const p = planetObjects.find(p => p.mesh === intersects[0].object);
-    if (p) {
-      focusedPlanet = p;
-      focusTransition = 0;
-      resetTransition = 0;
-    }
-  } else {
-    // 点击空白取消聚焦
-    focusedPlanet = null;
-    focusTransition = 0;
-  }
-});
-
-// ==================== 旅行者1号轨迹 ====================
-// 旅行者1号关键事件(精确日期):
-//   发射: 1977-09-05
-//   木星飞掠: 1979-03-05 (发射后546天)
-//   土星飞掠: 1980-11-12 (发射后1164天)
-//   之后飞出太阳系, 方向约赤经258°(黄道面上方~35°)
-//   2012-08-25 进入星际空间 (距太阳121AU)
-//   当前(2026)距太阳约165 AU
-
-// J2000 = 2000-01-01 12:00 TT
-const VOYAGER_LAUNCH_J2000_DAYS = -8156; // 1977-09-05距J2000的天数
-
-let voyagerMode = false; // 是否处于旅行者模式(线性AU比例)
-let voyagerSavedState = null; // 保存切换前的状态
-
-let voyagerState = {
-  active: false,
-  trajectoryLine: null,
-  probeMesh: null,
-  probeGlow: null,
-  trailPoints: [],
-  elapsedRelDays: 0,
-  animating: false,
-};
-
-// 计算某颗行星在指定J2000偏移天数时的轨道角度(弧度)
-// 这与 calcInitialAngle 逻辑一致，但可以计算任意时刻
-function getPlanetAngleAt(orbitDays, phaseOffsetDeg, j2000Days) {
-  const frac = ((j2000Days / orbitDays + phaseOffsetDeg / 360) % 1 + 1) % 1;
-  return frac * Math.PI * 2;
-}
-
-// 计算行星在指定时刻的黄道面位置(AU坐标)
-// x = AU * cos(angle), z = AU * sin(angle)
-function getPlanetPosAU(auDistance, orbitDays, phaseOffsetDeg, j2000Days) {
-  const angle = getPlanetAngleAt(orbitDays, phaseOffsetDeg, j2000Days);
-  return { x: auDistance * Math.cos(angle), z: auDistance * Math.sin(angle), angle };
-}
-
-// AU坐标转场景坐标(旅行者模式下 1AU = AU=5 场景单位)
-function auToScenePos(auX, auZ) {
-  return { x: auX * AU, z: auZ * AU };
-}
-
-// === 模式切换: 重建整个太阳系轨道 ===
-function enterVoyagerMode() {
-  voyagerMode = true;
-
-  // 保存当前状态
-  voyagerSavedState = {
-    elapsedDays,
-    timeSpeed,
-    paused,
-    cameraPos: camera.position.clone(),
-    target: controls.target.clone(),
-  };
-
-  // 移除旧的轨道线, 重建为线性AU比例
-  rebuildOrbitsForVoyager();
-  rebuildAsteroidBeltForVoyager();
-
-  // 设置时间到发射时刻
-  elapsedDays = VOYAGER_LAUNCH_J2000_DAYS;
-  timeSpeed = 30;
-  paused = false;
-  document.getElementById('btnPause').textContent = '暂停';
-
-  // 行星也需要转到1977-09-05的位置
-  setPlanetsToDate(VOYAGER_LAUNCH_J2000_DAYS);
-
-  // 不切换视角，仅扩大可视范围
-  camera.far = 5000;
-  camera.updateProjectionMatrix();
-  controls.maxDistance = 2000;
-
-  // 光源适应大场景
-  sunLight.distance = 5000;
-  sunLight.intensity = 3;
-
-  // 显示信息面板
-  document.getElementById('voyagerInfo').style.display = 'block';
-}
-
-function exitVoyagerMode() {
-  voyagerMode = false;
-
-  // 恢复轨道为sqrt缩放
-  rebuildOrbitsForNormal();
-  rebuildAsteroidBeltForNormal();
-
-  // 恢复状态
-  if (voyagerSavedState) {
-    elapsedDays = 0;
-    timeSpeed = 10;
-    paused = false;
-  }
-  document.getElementById('btnPause').textContent = '暂停';
-
-  // 行星回到J2000初始位置
-  setPlanetsToDate(0);
-
-  // 不切换视角，恢复可视范围
-  camera.far = 5000;
-  camera.updateProjectionMatrix();
-  controls.maxDistance = 500;
-
-  // 恢复光源
-  sunLight.distance = 800;
-  sunLight.intensity = 2.5;
-
-  document.getElementById('voyagerInfo').style.display = 'none';
-}
-
-// 重建轨道线并调整行星位置(旅行者模式: 线性AU)
-function rebuildOrbitsForVoyager() {
-  for (const p of planetObjects) {
-    const auR = p.data.auDistance * AU;
-
-    // 移除旧轨道线
-    if (p.orbitLine) { scene.remove(p.orbitLine); p.orbitLine = null; }
-
-    // 新轨道线(线性AU)
-    p.orbitLine = createOrbitLine(auR, 0x4466aa);
-    scene.add(p.orbitLine);
-
-    // 更新行星在orbitGroup中的偏移量
-    p.bodyGroup.position.x = auR;
-
-    // 行星尺寸: 按AU比例缩放(保持可见但比例正确)
-    // 木星最大(5.2AU轨道) → 半径保持4.5
-    // 其他按相对真实比例缩放
-    const realRadii = {
-      '水星': 0.6, '金星': 0.9, '地球': 1.0, '火星': 0.5,
-      '木星': 4.5, '土星': 3.8, '天王星': 2.0, '海王星': 1.9
-    };
-    const newR = realRadii[p.data.name] || 1;
-    p.mesh.scale.set(newR / p.data.radius, newR / p.data.radius, newR / p.data.radius);
-
-    // 卫星: 隐藏(在线性AU比例下卫星轨道太小无意义)
-    for (const m of p.moonObjects) {
-      m.mesh.visible = false;
-      // 卫星轨道线也在bodyGroup中, 一起隐藏
-    }
-    // 隐藏卫星轨道线(它们是bodyGroup的子元素, 用一个标记)
-    p.bodyGroup.children.forEach(child => {
-      if (child.isLine) child.visible = false;
-      if (child.isGroup) {
-        child.children.forEach(c => { if (c.isMesh) c.visible = false; });
-      }
-    });
-
-    // 土星/天王星环: 重新缩放
-    if (p.data.ring) {
-      const ringMesh = p.bodyGroup.children.find(c => c.isMesh && c !== p.mesh);
-      if (ringMesh) {
-        // 保持环相对行星的大小
-        const scaleRatio = newR / p.data.radius;
-        ringMesh.scale.set(scaleRatio, scaleRatio, scaleRatio);
-      }
-    }
+// ==================== 标签投影更新 ====================
+function updateLabels() {
+  const w = window.innerWidth, h = window.innerHeight;
+  for (const { el, pos } of labelData) {
+    const p = pos.clone().project(camera);
+    if (p.z > 1) { el.style.display = 'none'; continue; }
+    el.style.display = '';
+    el.style.left = ((p.x * 0.5 + 0.5) * w) + 'px';
+    el.style.top  = ((-p.y * 0.5 + 0.5) * h) + 'px';
   }
 }
 
-// 恢复轨道线(正常模式: sqrt缩放)
-function rebuildOrbitsForNormal() {
-  for (const p of planetObjects) {
-    // 移除旅行者模式的轨道线
-    if (p.orbitLine) { scene.remove(p.orbitLine); p.orbitLine = null; }
-
-    // 恢复sqrt缩放轨道线
-    p.orbitLine = createOrbitLine(p.data.orbitRadius, 0x4466aa);
-    scene.add(p.orbitLine);
-
-    // 恢复行星位置
-    p.bodyGroup.position.x = p.data.orbitRadius;
-
-    // 恢复行星尺寸
-    p.mesh.scale.set(1, 1, 1);
-
-    // 恢复卫星
-    p.bodyGroup.children.forEach(child => {
-      if (child.isLine) child.visible = true;
-      if (child.isGroup) {
-        child.children.forEach(c => { if (c.isMesh) c.visible = true; });
-      }
-    });
-
-    // 恢复环缩放
-    if (p.data.ring) {
-      const ringMesh = p.bodyGroup.children.find(c => c.isMesh && c !== p.mesh);
-      if (ringMesh) ringMesh.scale.set(1, 1, 1);
-    }
-  }
-}
-
-// 将所有行星的orbitGroup旋转到指定J2000天数时的角度
-function setPlanetsToDate(j2000Days) {
-  for (const p of planetObjects) {
-    const angle = getPlanetAngleAt(p.data.orbitDays, p.data.phaseOffsetDeg, j2000Days);
-    p.orbitGroup.rotation.y = angle;
-
-    // 卫星也重置
-    for (const m of p.moonObjects) {
-      const mAngle = getPlanetAngleAt(Math.abs(m.data.orbitDays), m.data.phaseOffsetDeg || 0, j2000Days);
-      m.orbitGroup.rotation.y = mAngle;
-    }
-  }
-}
-
-// === 构建旅行者1号轨迹 ===
-function createVoyagerTrajectory() {
-  // 清理旧轨迹
-  removeVoyagerTrajectoryOnly();
-
-  // 切换到旅行者模式(线性AU比例)
-  enterVoyagerMode();
-
-  // 计算各关键时刻行星的真实位置(AU坐标)
-  const launchJ2000 = VOYAGER_LAUNCH_J2000_DAYS;  // -8156
-  const jupiterJ2000 = launchJ2000 + 546;           // 飞掠木星
-  const saturnJ2000 = launchJ2000 + 1164;            // 飞掠土星
-
-  // 各行星在关键日期的AU位置
-  const earthLaunch = getPlanetPosAU(1.0, 365.25, 100.46, launchJ2000);
-  const jupiterFlyby = getPlanetPosAU(5.203, 4332.6, 34.40, jupiterJ2000);
-  const saturnFlyby = getPlanetPosAU(9.537, 10759, 49.94, saturnJ2000);
-
-  // 构建轨迹点(基于开普勒轨道的简化引力弹弓)
-  const points = [];
-
-  // 阶段1: 地球→木星 (发射到飞掠木星, 546天)
-  // 旅行者1号在太阳引力场中沿双曲线轨道飞行
-  // 简化: 用引力偏转曲线插值
-  const n1 = 80; // 阶段1采样点数
-  for (let i = 0; i <= n1; i++) {
-    const t = i / n1;
-    const daysRel = t * 546;
-    // 太阳引力场中的开普勒轨道近似:
-    // 径向距离从1AU到5.2AU, 角速度随距离减小(开普勒第二定律)
-    // r(t) 遵循从1AU到5.2AU的抛物线近似(速度从11km/s减到约8km/s)
-    const rAU = 1.0 + (5.203 - 1.0) * Math.pow(t, 0.75);
-    // 角度: 从地球位置转到木星位置, 偏转角与r成反比(面积速度恒定)
-    const angleLaunch = earthLaunch.angle;
-    const angleJupiter = jupiterFlyby.angle;
-    // 处理角度穿越0/2π的情况
-    let dAngle = angleJupiter - angleLaunch;
-    if (dAngle > Math.PI) dAngle -= 2 * Math.PI;
-    if (dAngle < -Math.PI) dAngle += 2 * Math.PI;
-    // 开普勒等面积: 角速度 ∝ 1/r², 所以角度增量 ∝ 1/r²
-    // 用数值积分近似
-    let angle = angleLaunch;
-    let sumInvR2 = 0;
-    const dt = 0.001;
-    for (let tt = 0; tt < t; tt += dt) {
-      const rr = 1.0 + (5.203 - 1.0) * Math.pow(tt, 0.75);
-      sumInvR2 += dt / (rr * rr);
-    }
-    // 归一化
-    let totalInvR2 = 0;
-    for (let tt = 0; tt <= 1; tt += dt) {
-      const rr = 1.0 + (5.203 - 1.0) * Math.pow(tt, 0.75);
-      totalInvR2 += dt / (rr * rr);
-    }
-    angle = angleLaunch + dAngle * (sumInvR2 / totalInvR2);
-
-    const auX = rAU * Math.cos(angle);
-    const auZ = rAU * Math.sin(angle);
-    const scenePos = auToScenePos(auX, auZ);
-    // 微小y偏移(实际轨道面接近黄道面)
-    const y = 0.1 * rAU * Math.sin(t * 0.5);
-    points.push(new THREE.Vector3(scenePos.x, y, scenePos.z));
-  }
-
-  // 阶段2: 木星→土星 (引力辅助后, 1164-546=618天)
-  // 木星引力弹弓使旅行者1号偏转约97°并加速
-  const n2 = 80;
-  const angleAfterJupiter = jupiterFlyby.angle; // 飞掠木星后偏转
-  const angleSaturn = saturnFlyby.angle;
-  let dAngle2 = angleSaturn - angleAfterJupiter;
-  if (dAngle2 > Math.PI) dAngle2 -= 2 * Math.PI;
-  if (dAngle2 < -Math.PI) dAngle2 += 2 * Math.PI;
-
-  for (let i = 1; i <= n2; i++) {
-    const t = i / n2;
-    // 从5.2AU到9.5AU
-    const rAU = 5.203 + (9.537 - 5.203) * Math.pow(t, 0.8);
-    // 角度插值(开普勒等面积)
-    let sumInvR2 = 0;
-    const dt = 0.001;
-    for (let tt = 0; tt < t; tt += dt) {
-      const rr = 5.203 + (9.537 - 5.203) * Math.pow(tt, 0.8);
-      sumInvR2 += dt / (rr * rr);
-    }
-    let totalInvR2 = 0;
-    for (let tt = 0; tt <= 1; tt += dt) {
-      const rr = 5.203 + (9.537 - 5.203) * Math.pow(tt, 0.8);
-      totalInvR2 += dt / (rr * rr);
-    }
-    const angle = angleAfterJupiter + dAngle2 * (sumInvR2 / totalInvR2);
-
-    const auX = rAU * Math.cos(angle);
-    const auZ = rAU * Math.sin(angle);
-    const scenePos = auToScenePos(auX, auZ);
-    const y = 0.15 * rAU * Math.sin(t * 0.3);
-    points.push(new THREE.Vector3(scenePos.x, y, scenePos.z));
-  }
-
-  // 阶段3: 土星之后飞出太阳系
-  // 飞掠土星后旅行者1号被弹射到黄道面上方约35°
-  // 速度约3.6 AU/年, 方向: 赤经258° ≈ 黄道经度约260°
-  const saturnPosScene = points[points.length - 1];
-  const n3 = 160;
-  const postSaturnYears = 46; // 1980到2026 = 46年
-  const maxAU = 9.537 + 3.6 * postSaturnYears; // ≈ 175 AU
-
-  // 土星处角度作为出发方向
-  const saturnAngle = saturnFlyby.angle;
-  // 出发方向: 大约在土星角度方向, 但偏转向上
-  const outAzimuth = saturnAngle + 0.1; // 微调偏转
-
-  for (let i = 1; i <= n3; i++) {
-    const t = i / n3;
-    // 速度3.6AU/年, 减速到约3.3AU/年(太阳引力微弱减速)
-    const rAU = 9.537 + (maxAU - 9.537) * t;
-    // 角度缓慢变化(太阳引力在远处极弱, 轨道近乎直线)
-    const angle = outAzimuth + 0.05 * Math.sin(t * 0.3);
-    const auX = rAU * Math.cos(angle);
-    const auZ = rAU * Math.sin(angle);
-    const scenePos = auToScenePos(auX, auZ);
-    // 向黄道面上方35°渐变爬升
-    const elevationAngle = 35 * Math.PI / 180;
-    const distFromSaturn = rAU - 9.537;
-    const y = distFromSaturn * AU * Math.sin(elevationAngle) * t;
-    points.push(new THREE.Vector3(scenePos.x, y, scenePos.z));
-  }
-
-  // 平滑曲线
-  const curve = new THREE.CatmullRomCurve3(points, false);
-  const smoothPts = curve.getPoints(500);
-  const geo = new THREE.BufferGeometry().setFromPoints(smoothPts);
-
-  // 渐变色: 亮绿(发射)→黄(木星飞掠)→橙(土星飞掠)→红(星际空间)
-  const colors = new Float32Array(smoothPts.length * 3);
-  for (let i = 0; i < smoothPts.length; i++) {
-    const t = i / smoothPts.length;
-    if (t < 0.16) { // 地球→木星
-      const tt = t / 0.16;
-      colors[i*3] = 0.2 + tt*0.8; colors[i*3+1] = 1; colors[i*3+2] = 0.3*(1-tt);
-    } else if (t < 0.32) { // 木星→土星
-      const tt = (t - 0.16) / 0.16;
-      colors[i*3] = 1; colors[i*3+1] = 1 - tt*0.35; colors[i*3+2] = 0;
-    } else { // 土星→星际空间
-      const tt = (t - 0.32) / 0.68;
-      colors[i*3] = 1 - tt*0.3; colors[i*3+1] = 0.65 - tt*0.45; colors[i*3+2] = 0.05;
-    }
-  }
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85, linewidth: 2 });
-  voyagerState.trajectoryLine = new THREE.Line(geo, mat);
-  scene.add(voyagerState.trajectoryLine);
-
-  // 探测器标记
-  const probeGeo = new THREE.ConeGeometry(0.6, 1.5, 4);
-  probeGeo.rotateX(Math.PI / 2);
-  const probeMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
-  voyagerState.probeMesh = new THREE.Mesh(probeGeo, probeMat);
-  voyagerState.probeMesh.position.copy(smoothPts[0]);
-  scene.add(voyagerState.probeMesh);
-
-  // 探测器光晕
-  const glowTex = createGlowTexture();
-  const glowMat = new THREE.SpriteMaterial({
-    map: glowTex, color: 0x44ff88,
-    transparent: true, blending: THREE.AdditiveBlending,
-    opacity: 0.5, depthWrite: false
-  });
-  voyagerState.probeGlow = new THREE.Sprite(glowMat);
-  voyagerState.probeGlow.scale.set(4, 4, 1);
-  voyagerState.probeGlow.position.copy(smoothPts[0]);
-  scene.add(voyagerState.probeGlow);
-
-  // 存储
-  voyagerState.trailPoints = smoothPts;
-  voyagerState.active = true;
-  voyagerState.elapsedRelDays = 0;
-  voyagerState.animating = true;
-}
-
-// 只移除轨迹视觉元素, 不退出旅行者模式
-function removeVoyagerTrajectoryOnly() {
-  if (voyagerState.trajectoryLine) { scene.remove(voyagerState.trajectoryLine); voyagerState.trajectoryLine = null; }
-  if (voyagerState.probeMesh) { scene.remove(voyagerState.probeMesh); voyagerState.probeMesh = null; }
-  if (voyagerState.probeGlow) { scene.remove(voyagerState.probeGlow); voyagerState.probeGlow = null; }
-  voyagerState.trailPoints = [];
-  voyagerState.animating = false;
-}
-
-// 完全移除(包括退出模式)
-function removeVoyagerTrajectory() {
-  removeVoyagerTrajectoryOnly();
-  voyagerState.active = false;
-  if (voyagerMode) exitVoyagerMode();
-}
-
-function updateVoyagerProbe(daysDelta) {
-  if (!voyagerState.active || !voyagerState.animating) return;
-
-  voyagerState.elapsedRelDays += daysDelta;
-  const relDays = voyagerState.elapsedRelDays;
-
-  // 自动调速
-  if (relDays < 600 && timeSpeed < 30) timeSpeed = 30;
-  else if (relDays > 1200 && timeSpeed < 100) timeSpeed = 100;
-  else if (relDays > 3000 && timeSpeed < 365) timeSpeed = 365;
-
-  // 总时间: 1977到2026 ≈ 17700天
-  const totalDays = 17700;
-  // 根据已过天数计算探测器应在的AU距离(简化模型)
-  // 1977-09-05发射, 木星546天, 土星1164天, 之后3.6AU/年
-  let targetAU;
-  if (relDays <= 0) {
-    targetAU = 1.0; // 地球轨道
-  } else if (relDays <= 546) {
-    // 地球→木星: 1AU → 5.2AU, 开普勒轨道减速
-    const t = relDays / 546;
-    targetAU = 1.0 + (5.203 - 1.0) * Math.pow(t, 0.75);
-  } else if (relDays <= 1164) {
-    // 木星→土星: 5.2AU → 9.5AU
-    const t = (relDays - 546) / (1164 - 546);
-    targetAU = 5.203 + (9.537 - 5.203) * Math.pow(t, 0.8);
-  } else {
-    // 土星之后: ~3.6 AU/年, 微弱减速
-    const yearsAfter = (relDays - 1164) / 365.25;
-    targetAU = 9.537 + 3.6 * yearsAfter - 0.005 * yearsAfter * yearsAfter;
-  }
-
-  // 在轨迹点中二分搜索距太阳最近于targetAU的点
-  // 轨迹点到原点的xz距离是单调递增的(探测器飞离太阳)
-  let idx = 0;
-  let lo = 0, hi = voyagerState.trailPoints.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    const pt = voyagerState.trailPoints[mid];
-    const ptDist = Math.sqrt(pt.x * pt.x + pt.z * pt.z) / AU;
-    if (ptDist < targetAU) lo = mid + 1;
-    else hi = mid;
-  }
-  idx = lo;
-  // 微调: 检查lo和lo-1哪个更近
-  if (idx > 0) {
-    const ptA = voyagerState.trailPoints[idx - 1];
-    const ptB = voyagerState.trailPoints[idx];
-    const dA = Math.abs(Math.sqrt(ptA.x * ptA.x + ptA.z * ptA.z) / AU - targetAU);
-    const dB = Math.abs(Math.sqrt(ptB.x * ptB.x + ptB.z * ptB.z) / AU - targetAU);
-    if (dA < dB) idx = idx - 1;
-  }
-  idx = Math.max(0, Math.min(voyagerState.trailPoints.length - 1, idx));
-
-
-  if (idx < voyagerState.trailPoints.length) {
-    const pos = voyagerState.trailPoints[idx];
-    voyagerState.probeMesh.position.copy(pos);
-    voyagerState.probeGlow.position.copy(pos);
-
-    // 探测器朝向
-    if (idx < voyagerState.trailPoints.length - 1) {
-      voyagerState.probeMesh.lookAt(voyagerState.trailPoints[idx + 1]);
-    }
-
-    // 相机跟随(旅行者模式, 根据距离动态调整偏移)
-    if (relDays > 50) {
-      const probeDist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
-      const viewRange = Math.max(60, probeDist * 0.4);
-      const camOffset = new THREE.Vector3(-viewRange * 0.4, viewRange * 0.6, -viewRange * 0.4);
-      const camTarget = pos.clone().add(camOffset);
-      const lerpSpeed = probeDist > 200 ? 0.015 : 0.008;
-      camera.position.lerp(camTarget, lerpSpeed);
-      controls.target.lerp(pos, lerpSpeed * 2);
-    }
-
-    // 更新信息面板
-    const launchDate = new Date(1977, 8, 5);
-    const currentDate = new Date(launchDate.getTime() + relDays * 86400000);
-    const dateStr = currentDate.getFullYear() + '-' +
-      String(currentDate.getMonth()+1).padStart(2,'0') + '-' +
-      String(currentDate.getDate()).padStart(2,'0');
-
-    // 距太阳(AU): 用xz平面距离(黄道面投影)
-    const distAU = Math.sqrt(pos.x * pos.x + pos.z * pos.z) / AU;
-
-    // 关键事件
-    let event = '';
-    if (relDays < 0) event = '等待发射...';
-    else if (relDays < 10) event = '发射升空!';
-    else if (relDays < 540) event = '飞往木星...';
-    else if (relDays < 560) event = '★ 木星飞掠! 引力辅助';
-    else if (relDays < 1150) event = '飞往土星...';
-    else if (relDays < 1180) event = '★ 土星飞掠! 引力辅助';
-    else if (relDays < 4000) event = '飞离太阳系...';
-    else if (relDays < 9000) event = '穿越柯伊伯带...';
-    else if (relDays < 12700) event = '接近星际空间...';
-    else if (relDays < 12800) event = '★ 进入星际空间! (121AU)';
-    else event = '星际空间巡航中';
-
-    document.getElementById('voyagerDate').textContent = '日期: ' + dateStr;
-    document.getElementById('voyagerEvent').textContent = '事件: ' + event;
-    document.getElementById('voyagerDist').textContent = '距太阳: ' + distAU.toFixed(1) + ' AU';
-  }
-
-  if (relDays >= totalDays) {
-    voyagerState.animating = false;
-    document.getElementById('voyagerEvent').textContent = '事件: 已达~165AU 星际空间';
-  }
-}
-
-// ==================== UI 事件 ====================
-document.getElementById('btnPause').addEventListener('click', togglePause);
-document.getElementById('btnSlower').addEventListener('click', () => adjustSpeed(-1));
-document.getElementById('btnFaster').addEventListener('click', () => adjustSpeed(1));
-document.getElementById('btnReset').addEventListener('click', resetView);
-document.getElementById('btnS1').addEventListener('click', () => { timeSpeed = 1; });
-document.getElementById('btnS2').addEventListener('click', () => { timeSpeed = 10; });
-document.getElementById('btnS3').addEventListener('click', () => { timeSpeed = 365; });
-
+// ==================== 交互 ====================
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); resetView(); }
-  else if (e.code === 'KeyP') togglePause();
-  else if (e.code === 'ArrowUp') adjustSpeed(1);
-  else if (e.code === 'ArrowDown') adjustSpeed(-1);
-  else if (e.key === '1') {
-    if (voyagerState.active) removeVoyagerTrajectory();
-    else createVoyagerTrajectory();
+  if (e.code === 'Space') {
+    e.preventDefault();
+    camera.position.copy(DEFAULT_CAM);
+    controls.target.copy(DEFAULT_TARGET);
   }
-  else if (e.key === '2') timeSpeed = 10;
-  else if (e.key === '3') timeSpeed = 100;
 });
 
-function togglePause() {
-  paused = !paused;
-  document.getElementById('btnPause').textContent = paused ? '继续' : '暂停';
-}
-
-const SPEED_LEVELS = [0.1, 0.5, 1, 5, 10, 50, 100, 365];
-function adjustSpeed(dir) {
-  let idx = SPEED_LEVELS.indexOf(timeSpeed);
-  if (idx === -1) {
-    // 找最近的
-    idx = SPEED_LEVELS.reduce((best, v, i) =>
-      Math.abs(v - timeSpeed) < Math.abs(SPEED_LEVELS[best] - timeSpeed) ? i : best, 0);
-  }
-  idx = Math.max(0, Math.min(SPEED_LEVELS.length - 1, idx + dir));
-  timeSpeed = SPEED_LEVELS[idx];
-}
-
-function resetView() {
-  timeSpeed = 10;
-  paused = false;
-  elapsedDays = 0;
-  focusedPlanet = null;
-  focusTransition = 0;
-  removeVoyagerTrajectory();
-  document.getElementById('btnPause').textContent = '暂停';
-  // 启动平滑过渡
-  resetStartCamPos = camera.position.clone();
-  resetStartTarget = controls.target.clone();
-  resetTransition = 0.001;
-}
-
-// ==================== 窗口 resize ====================
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ==================== 动画循环 ====================
+// ==================== 渲染 ====================
 function animate() {
   requestAnimationFrame(animate);
-
-  const dt = clock.getDelta();
-
-  if (!paused) {
-    const daysDelta = dt * timeSpeed;
-    elapsedDays += daysDelta;
-
-    // 更新行星
-    for (const p of planetObjects) {
-      // 公转
-      const orbitSpeed = (2 * Math.PI / p.data.orbitDays) * daysDelta;
-      p.orbitGroup.rotation.y += orbitSpeed;
-
-      // 自转
-      const rotSpeed = (2 * Math.PI / (p.data.rotationHours * 3600 / 86400)) * daysDelta;
-      p.mesh.rotation.y += rotSpeed;
-
-      // 卫星公转
-      for (const m of p.moonObjects) {
-        const moonOrbitSpeed = (2 * Math.PI / Math.abs(m.data.orbitDays)) * daysDelta;
-        m.orbitGroup.rotation.y += m.data.orbitDays < 0 ? -moonOrbitSpeed : moonOrbitSpeed;
-      }
-
-      // 获取世界坐标（用于 raycaster）
-      p.mesh.getWorldPosition(p.worldPos);
-    }
-
-    // 小行星带公转
-    updateAsteroidBelt(daysDelta);
-
-    // 旅行者1号探测器更新
-    updateVoyagerProbe(daysDelta);
-  }
-
-  // Raycaster 悬停检测
-  raycaster.setFromCamera(mouse, camera);
-  const allMeshes = planetObjects.map(p => p.mesh);
-  const intersects = raycaster.intersectObjects(allMeshes);
-
-  const tip = document.getElementById('tooltip');
-  if (intersects.length > 0) {
-    const hitMesh = intersects[0].object;
-    const p = planetObjects.find(p => p.mesh === hitMesh);
-    if (p) {
-      hoveredPlanet = p;
-      const c = '#' + p.data.color.toString(16).padStart(6, '0');
-      tip.style.display = 'block';
-      tip.style.setProperty('--pc', c);
-      tip.style.left = (mouse.x * 0.5 + 0.5) * window.innerWidth + 18 + 'px';
-      tip.style.top = (-mouse.y * 0.5 + 0.5) * window.innerHeight + 18 + 'px';
-      document.getElementById('tipName').textContent = p.data.name;
-      const distAU = p.data.auDistance;
-      document.getElementById('tipInfo').innerHTML =
-        `轨道半径: ${distAU} AU<br>` +
-        `公转周期: ${p.data.orbitDays.toFixed(1)} 天<br>` +
-        `自转周期: ${Math.abs(p.data.rotationHours).toFixed(1)} 小时${p.data.rotationHours < 0 ? ' (逆行)' : ''}`;
-    }
-  } else {
-    hoveredPlanet = null;
-    tip.style.display = 'none';
-  }
-
-  // 重置视角平滑过渡（与聚焦行星一致的追逐式 lerp）
-  if (resetTransition > 0) {
-    const dist = camera.position.distanceTo(DEFAULT_CAM_POS);
-    const tDist = controls.target.distanceTo(DEFAULT_TARGET);
-    // 足够接近时停止
-    if (dist < 0.5 && tDist < 0.5) {
-      camera.position.copy(DEFAULT_CAM_POS);
-      controls.target.copy(DEFAULT_TARGET);
-      resetTransition = 0;
-    } else {
-      camera.position.lerp(DEFAULT_CAM_POS, 0.04);
-      controls.target.lerp(DEFAULT_TARGET, 0.04);
-    }
-  }
-
-  // 聚焦行星: 持续让 controls.target 跟随行星，相机位置由用户自由控制
-  if (focusedPlanet && resetTransition === 0) {
-    focusTransition = Math.min(1, focusTransition + dt * 2);
-    const targetPos = focusedPlanet.worldPos.clone();
-    if (focusTransition < 1) {
-      // 过渡阶段: 同时移动相机和target到行星附近
-      const t = focusTransition;
-      const smooth = t * t * (3 - 2 * t);
-      const offset = new THREE.Vector3(
-        focusedPlanet.data.radius * 5,
-        focusedPlanet.data.radius * 3,
-        focusedPlanet.data.radius * 5
-      );
-      const camTarget = targetPos.clone().add(offset);
-      camera.position.lerp(camTarget, smooth * 0.05);
-    }
-    // 始终让target跟随行星(用户旋转/缩放时视角中心不丢失)
-    controls.target.lerp(targetPos, 0.1);
-  }
-
-  // UI 更新
-  document.getElementById('speedVal').textContent = formatSpeed(timeSpeed);
-  document.getElementById('daysVal').textContent = Math.floor(elapsedDays).toLocaleString();
-
   controls.update();
+  updateLabels();
   renderer.render(scene, camera);
 }
-
-function formatSpeed(s) {
-  if (s < 1) return s.toFixed(1) + ' 天/秒';
-  if (s < 365) return s.toFixed(0) + ' 天/秒';
-  return (s / 365.25).toFixed(1) + ' 年/秒';
-}
-
 animate();
 </script>
 </body>
