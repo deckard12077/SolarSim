@@ -669,9 +669,202 @@ function createPlanet(data) {
   };
 }
 
+// ==================== 小行星带 ====================
+// 真实范围: 2.1-3.3 AU (火星1.524AU ~ 木星5.203AU之间)
+const ASTEROID_BELT = {
+  auInner: 2.1,
+  auOuter: 3.3,
+  count: 3000,
+  // sqrt缩放下的显示半径范围(与行星轨道半径一致的计算方式)
+  get displayInner() { return Math.sqrt(this.auInner) * 32; }, // ≈46.4
+  get displayOuter() { return Math.sqrt(this.auOuter) * 32; }, // ≈58.1
+  orbitDaysRange: [1200, 3000], // 平均公转周期范围(天)
+};
+
+let asteroidBelt = null; // THREE.Points
+let asteroidAngles = null; // 每颗小行星的当前角度
+
+function createAsteroidBelt() {
+  const count = ASTEROID_BELT.count;
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  asteroidAngles = new Float32Array(count); // 存储每颗的角度
+  const radii = new Float32Array(count); // 存储每颗的轨道半径
+
+  for (let i = 0; i < count; i++) {
+    // 随机轨道半径(偏向内带更密集——与真实分布吻合)
+    const t = Math.random();
+    const r = ASTEROID_BELT.displayInner + (ASTEROID_BELT.displayOuter - ASTEROID_BELT.displayInner) * Math.pow(t, 0.7);
+
+    // 随机初始角度
+    const angle = Math.random() * Math.PI * 2;
+    asteroidAngles[i] = angle;
+    radii[i] = r;
+
+    // 轻微y轴偏移(小行星带不完全在黄道面上, 倾角约±20°)
+    const yOffset = (Math.random() - 0.5) * 3;
+
+    positions[i * 3]     = Math.cos(angle) * r;
+    positions[i * 3 + 1] = yOffset;
+    positions[i * 3 + 2] = Math.sin(angle) * r;
+
+    // 颜色: 灰褐色为主(C型小行星), 偶有浅色(S型)
+    const colorType = Math.random();
+    if (colorType < 0.6) { // C型: 暗灰
+      const b = 0.35 + Math.random() * 0.15;
+      colors[i * 3] = b; colors[i * 3 + 1] = b * 0.95; colors[i * 3 + 2] = b * 0.9;
+    } else if (colorType < 0.85) { // S型: 浅灰褐
+      const b = 0.5 + Math.random() * 0.2;
+      colors[i * 3] = b; colors[i * 3 + 1] = b * 0.92; colors[i * 3 + 2] = b * 0.85;
+    } else { // M型: 微金属光泽
+      const b = 0.55 + Math.random() * 0.15;
+      colors[i * 3] = b; colors[i * 3 + 1] = b * 0.96; colors[i * 3 + 2] = b * 0.92;
+    }
+
+    sizes[i] = 0.3 + Math.random() * 0.8;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+  // 存储半径到userData, 供模式切换时使用
+  geo.userData = { radii, yOffset: new Float32Array(count) };
+  for (let i = 0; i < count; i++) {
+    geo.userData.yOffset[i] = (Math.random() - 0.5) * 3;
+  }
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.8,
+    vertexColors: true,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.75
+  });
+
+  asteroidBelt = new THREE.Points(geo, mat);
+  scene.add(asteroidBelt);
+
+  // 小行星带微光晕环(视觉提示, 非常淡的环形标记)
+  const glowRingInner = ASTEROID_BELT.displayInner - 1;
+  const glowRingOuter = ASTEROID_BELT.displayOuter + 1;
+  const ringGeo = new THREE.RingGeometry(glowRingInner, glowRingOuter, 128);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0x887766,
+    transparent: true,
+    opacity: 0.04,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const glowRing = new THREE.Mesh(ringGeo, ringMat);
+  glowRing.rotation.x = -Math.PI / 2; // 平放在黄道面
+  glowRing.userData.isAsteroidGlow = true;
+  scene.add(glowRing);
+}
+
+// 更新小行星带位置(公转动画)
+function updateAsteroidBelt(daysDelta) {
+  if (!asteroidBelt || !asteroidAngles) return;
+
+  const positions = asteroidBelt.geometry.attributes.position.array;
+  const count = ASTEROID_BELT.count;
+  const radii = asteroidBelt.geometry.userData.radii;
+  const yOffsets = asteroidBelt.geometry.userData.yOffset;
+
+  // 小行星带平均公转周期约3-8年, 按半径不同速度不同(开普勒定律)
+  for (let i = 0; i < count; i++) {
+    // 近似公转周期: T ∝ r^1.5 (开普勒第三定律)
+    const rAU = ASTEROID_BELT.auInner + (ASTEROID_BELT.auOuter - ASTEROID_BELT.auInner) *
+      Math.pow((radii[i] - ASTEROID_BELT.displayInner) / (ASTEROID_BELT.displayOuter - ASTEROID_BELT.displayInner), 1 / 0.7);
+    const orbitPeriodDays = Math.pow(rAU, 1.5) * 365.25; // 开普勒第三定律
+    const angularSpeed = (2 * Math.PI / orbitPeriodDays) * daysDelta;
+    asteroidAngles[i] += angularSpeed;
+
+    positions[i * 3]     = Math.cos(asteroidAngles[i]) * radii[i];
+    positions[i * 3 + 1] = yOffsets[i];
+    positions[i * 3 + 2] = Math.sin(asteroidAngles[i]) * radii[i];
+  }
+
+  asteroidBelt.geometry.attributes.position.needsUpdate = true;
+}
+
+// 旅行者模式下重建小行星带(线性AU比例)
+function rebuildAsteroidBeltForVoyager() {
+  if (!asteroidBelt) return;
+  const positions = asteroidBelt.geometry.attributes.position.array;
+  const count = ASTEROID_BELT.count;
+  const yOffsets = asteroidBelt.geometry.userData.yOffset;
+
+  for (let i = 0; i < count; i++) {
+    // 按当前角度重新计算, 半径从sqrt缩放改为线性AU
+    const t = Math.random();
+    const rAU = ASTEROID_BELT.auInner + (ASTEROID_BELT.auOuter - ASTEROID_BELT.auInner) * Math.pow(t, 0.7);
+    const r = rAU * AU; // 线性AU
+    asteroidBelt.geometry.userData.radii[i] = r;
+
+    positions[i * 3]     = Math.cos(asteroidAngles[i]) * r;
+    positions[i * 3 + 1] = yOffsets[i] * (r / ASTEROID_BELT.displayInner); // 按比例放大y偏移
+    positions[i * 3 + 2] = Math.sin(asteroidAngles[i]) * r;
+  }
+
+  asteroidBelt.geometry.attributes.position.needsUpdate = true;
+
+  // 更新微光晕环尺寸
+  const glowRing = scene.children.find(c => c.userData && c.userData.isAsteroidGlow);
+  if (glowRing) {
+    scene.remove(glowRing);
+    const ringGeo = new THREE.RingGeometry(ASTEROID_BELT.auInner * AU - 1, ASTEROID_BELT.auOuter * AU + 1, 128);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x887766, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false,
+    });
+    const newRing = new THREE.Mesh(ringGeo, ringMat);
+    newRing.rotation.x = -Math.PI / 2;
+    newRing.userData.isAsteroidGlow = true;
+    scene.add(newRing);
+  }
+}
+
+// 正常模式恢复小行星带(sqrt缩放)
+function rebuildAsteroidBeltForNormal() {
+  if (!asteroidBelt) return;
+  const positions = asteroidBelt.geometry.attributes.position.array;
+  const count = ASTEROID_BELT.count;
+  const yOffsets = asteroidBelt.geometry.userData.yOffset;
+
+  for (let i = 0; i < count; i++) {
+    // 恢复sqrt缩放半径
+    const t = Math.random();
+    const r = ASTEROID_BELT.displayInner + (ASTEROID_BELT.displayOuter - ASTEROID_BELT.displayInner) * Math.pow(t, 0.7);
+    asteroidBelt.geometry.userData.radii[i] = r;
+
+    positions[i * 3]     = Math.cos(asteroidAngles[i]) * r;
+    positions[i * 3 + 1] = yOffsets[i];
+    positions[i * 3 + 2] = Math.sin(asteroidAngles[i]) * r;
+  }
+
+  asteroidBelt.geometry.attributes.position.needsUpdate = true;
+
+  // 恢复微光晕环尺寸
+  const glowRing = scene.children.find(c => c.userData && c.userData.isAsteroidGlow);
+  if (glowRing) {
+    scene.remove(glowRing);
+    const ringGeo = new THREE.RingGeometry(ASTEROID_BELT.displayInner - 1, ASTEROID_BELT.displayOuter + 1, 128);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x887766, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false,
+    });
+    const newRing = new THREE.Mesh(ringGeo, ringMat);
+    newRing.rotation.x = -Math.PI / 2;
+    newRing.userData.isAsteroidGlow = true;
+    scene.add(newRing);
+  }
+}
+
 // ==================== 构建 ====================
 const sun = createSun();
 createStarField();
+createAsteroidBelt();
 
 for (const pData of PLANET_DATA) {
   planetObjects.push(createPlanet(pData));
@@ -782,6 +975,7 @@ function enterVoyagerMode() {
 
   // 移除旧的轨道线, 重建为线性AU比例
   rebuildOrbitsForVoyager();
+  rebuildAsteroidBeltForVoyager();
 
   // 设置时间到发射时刻
   elapsedDays = VOYAGER_LAUNCH_J2000_DAYS;
@@ -810,6 +1004,7 @@ function exitVoyagerMode() {
 
   // 恢复轨道为sqrt缩放
   rebuildOrbitsForNormal();
+  rebuildAsteroidBeltForNormal();
 
   // 恢复状态
   if (voyagerSavedState) {
@@ -1326,6 +1521,9 @@ function animate() {
       // 获取世界坐标（用于 raycaster）
       p.mesh.getWorldPosition(p.worldPos);
     }
+
+    // 小行星带公转
+    updateAsteroidBelt(daysDelta);
 
     // 旅行者1号探测器更新
     updateVoyagerProbe(daysDelta);
