@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>太阳系三维模拟2</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #050810; overflow: hidden; font-family: "Microsoft YaHei","SimHei",sans-serif; }
+canvas { display: block; }
+
+#info {
+  position: fixed; top: 16px; left: 16px;
+  background: rgba(8,12,24,0.88); border: 1px solid rgba(80,120,255,0.15);
+  border-radius: 10px; padding: 14px 20px; color: #bbb; font-size: 13px;
+  line-height: 1.85; backdrop-filter: blur(6px); min-width: 230px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5); user-select: none;
+}
+#info .title { color: #ffdc64; font-size: 16px; font-weight: bold; }
+#info .sub { color: #888; font-size: 12px; margin-top: 2px; }
+#info .sep { color: #444; letter-spacing: 2px; }
+#info .key { color: #8ab4f8; }
+#info .date { color: #aaa; font-size: 11px; margin-top: 6px; }
+
+.planet-label {
+  position: absolute; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 0 6px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,0.8);
+  transform: translate(-50%, -100%); padding-bottom: 4px;
+  text-align: center; line-height: 1.35;
+}
+.planet-label .pname { font-size: 12px; font-weight: bold; }
+.planet-label .au { color: #999; font-size: 10px; }
+
+.au-label {
+  position: absolute; color: #333355; font-size: 10px;
+  pointer-events: none; transform: translate(4px, -50%);
+}
+</style>
+</head>
+<body>
+
+<div id="info">
+  <div class="title">太阳系轨道图</div>
+  <div class="sub">八大行星运动轨迹 · J2000真实轨道根数</div>
+  <div class="sep">───────────────</div>
+  <div><span class="key">比例</span> 线性AU（1 AU = 5 单位）</div>
+  <div><span class="key">轨道</span> 开普勒椭圆（含偏心率）</div>
+  <div class="sep">───────────────</div>
+  <div><span class="key">左键拖拽</span> 旋转</div>
+  <div><span class="key">右键拖拽</span> 平移</div>
+  <div><span class="key">滚轮</span> 缩放（放大看内行星）</div>
+  <div><span class="key">空格</span> 重置视角</div>
+  <div class="date" id="dateInfo"></div>
+</div>
+
+<div id="labels-container"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ==================== 常量 ====================
+const AU = 5;                           // 1 AU = 5 场景单位
+const J2000_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
+const MS_PER_DAY = 86400000;
+const DEG = Math.PI / 180;
+const j2000Days = (Date.now() - J2000_MS) / MS_PER_DAY;
+
+// ==================== 八大行星 J2000 轨道根数 ====================
+// a: 半长轴(AU), e: 偏心率, i: 轨道倾角(°)
+// Omega: 升交点经度(°), omega: 近日点幅角(°)
+// M0: J2000平近点角(°), period: 公转周期(天)
+const PLANETS = [
+  {
+    name: '水星', a: 0.38710, e: 0.20563, i: 7.005,
+    Omega: 48.331, omega: 29.124, M0: 174.796, period: 87.969,
+    displayRadius: 0.35, color: 0xb8a88e, orbitColor: 0x887766
+  },
+  {
+    name: '金星', a: 0.72333, e: 0.00677, i: 3.395,
+    Omega: 76.680, omega: 54.884, M0: 50.416, period: 224.701,
+    displayRadius: 0.55, color: 0xf5da7a, orbitColor: 0xaa9944
+  },
+  {
+    name: '地球', a: 1.00000, e: 0.01671, i: 0.000,
+    Omega: -11.261, omega: 114.208, M0: 357.517, period: 365.256,
+    displayRadius: 0.60, color: 0x55bbff, orbitColor: 0x4488aa
+  },
+  {
+    name: '火星', a: 1.52368, e: 0.09341, i: 1.850,
+    Omega: 49.558, omega: 286.502, M0: 19.389, period: 686.980,
+    displayRadius: 0.45, color: 0xee6633, orbitColor: 0xaa4422
+  },
+  {
+    name: '木星', a: 5.20260, e: 0.04839, i: 1.303,
+    Omega: 100.464, omega: 273.867, M0: 20.070, period: 4332.589,
+    displayRadius: 1.80, color: 0xe0c070, orbitColor: 0xaa8833
+  },
+  {
+    name: '土星', a: 9.55491, e: 0.05415, i: 2.489,
+    Omega: 113.666, omega: 339.392, M0: 317.021, period: 10759.22,
+    displayRadius: 1.55, color: 0xecc87a, orbitColor: 0xaa9944
+  },
+  {
+    name: '天王星', a: 19.2184, e: 0.04717, i: 0.773,
+    Omega: 74.006, omega: 96.998, M0: 142.239, period: 30688.5,
+    displayRadius: 1.10, color: 0x77eeee, orbitColor: 0x4499aa
+  },
+  {
+    name: '海王星', a: 30.1104, e: 0.00859, i: 1.770,
+    Omega: 131.784, omega: 273.187, M0: 256.228, period: 60182.0,
+    displayRadius: 1.05, color: 0x5577ff, orbitColor: 0x3355aa
+  }
+];
+
+// ==================== 开普勒方程求解 (Newton-Raphson) ====================
+function solveKepler(M, e) {
+  M = ((M % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  let E = M;
+  for (let k = 0; k < 50; k++) {
+    const dE = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    E -= dE;
+    if (Math.abs(dE) < 1e-10) break;
+  }
+  return E;
+}
+
+// ==================== 轨道根数 → 黄道坐标 ====================
+function eclipticPos(planet, days) {
+  const { a, e, i, Omega, omega, M0, period } = planet;
+  const n = 2 * Math.PI / period;
+  const M = M0 * DEG + n * days;
+  const E = solveKepler(M, e);
+  const v = 2 * Math.atan2(
+    Math.sqrt(1 + e) * Math.sin(E / 2),
+    Math.sqrt(1 - e) * Math.cos(E / 2)
+  );
+  const r = a * (1 - e * Math.cos(E));
+  const xo = r * Math.cos(v), yo = r * Math.sin(v);
+
+  const w = omega * DEG, O = Omega * DEG, inc = i * DEG;
+  const cw = Math.cos(w), sw = Math.sin(w);
+  const cO = Math.cos(O), sO = Math.sin(O);
+  const ci = Math.cos(inc), si = Math.sin(inc);
+
+  return {
+    x: (cO*cw - sO*sw*ci)*xo + (-cO*sw - sO*cw*ci)*yo,
+    y: (sO*cw + cO*sw*ci)*xo + (-sO*sw + cO*cw*ci)*yo,
+    z: (sw*si)*xo + (cw*si)*yo
+  };
+}
+
+// 黄道坐标 → Three.js场景 (Y朝上, 黄道面=XZ平面, 北极=+Y)
+function toScene(ecl) {
+  return new THREE.Vector3(ecl.x * AU, ecl.z * AU, -ecl.y * AU);
+}
+
+// ==================== 场景初始化 ====================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050810);
+
+const camera = new THREE.PerspectiveCamera(
+  55, window.innerWidth / window.innerHeight, 0.1, 5000
+);
+camera.position.set(0, 300, 80);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.target.set(0, 0, 0);
+controls.minDistance = 3;
+controls.maxDistance = 800;
+
+const DEFAULT_CAM = camera.position.clone();
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
+
+// ==================== 光照 ====================
+scene.add(new THREE.PointLight(0xffffff, 2.5, 2000, 0.3));
+scene.add(new THREE.AmbientLight(0x222244, 0.6));
+
+// ==================== 太阳 ====================
+(function() {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(
+    new THREE.SphereGeometry(1.5, 32, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffdd44 })
+  ));
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grad.addColorStop(0, 'rgba(255,230,120,1)');
+  grad.addColorStop(0.15, 'rgba(255,200,60,0.6)');
+  grad.addColorStop(0.4, 'rgba(255,140,20,0.15)');
+  grad.addColorStop(1, 'rgba(255,100,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 256);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(c), color: 0xffcc44,
+    transparent: true, blending: THREE.AdditiveBlending,
+    opacity: 0.4, depthWrite: false
+  }));
+  glow.scale.set(14, 14, 1);
+  g.add(glow);
+  scene.add(g);
+})();
+
+// ==================== AU 参考圈 ====================
+const labelData = [];
+
+(function() {
+  const auVals = [1, 2, 5, 10, 20, 30];
+  const ctn = document.getElementById('labels-container');
+  for (const au of auVals) {
+    const r = au * AU;
+    const pts = [];
+    for (let j = 0; j <= 128; j++) {
+      const a = (j / 128) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+    }
+    scene.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: 0x1a1a33, transparent: true, opacity: 0.4 })
+    ));
+    const lbl = document.createElement('div');
+    lbl.className = 'au-label';
+    lbl.textContent = au + ' AU';
+    ctn.appendChild(lbl);
+    labelData.push({ el: lbl, pos: new THREE.Vector3(r + 2, 0, 0) });
+  }
+})();
+
+// ==================== 轨道线 (开普勒椭圆) ====================
+function buildOrbitLine(planet) {
+  const { a, e, i, Omega, omega } = planet;
+  const N = 512;
+  const pts = [];
+  const w = omega * DEG, O = Omega * DEG, inc = i * DEG;
+  const cw = Math.cos(w), sw = Math.sin(w);
+  const cO = Math.cos(O), sO = Math.sin(O);
+  const ci = Math.cos(inc), si = Math.sin(inc);
+
+  for (let j = 0; j <= N; j++) {
+    const M = (j / N) * 2 * Math.PI;
+    const E = solveKepler(M, e);
+    const v = 2 * Math.atan2(
+      Math.sqrt(1 + e) * Math.sin(E / 2),
+      Math.sqrt(1 - e) * Math.cos(E / 2)
+    );
+    const r = a * (1 - e * Math.cos(E));
+    const xo = r * Math.cos(v), yo = r * Math.sin(v);
+
+    const xe = (cO*cw - sO*sw*ci)*xo + (-cO*sw - sO*cw*ci)*yo;
+    const ye = (sO*cw + cO*sw*ci)*xo + (-sO*sw + cO*cw*ci)*yo;
+    const ze = (sw*si)*xo + (cw*si)*yo;
+
+    pts.push(new THREE.Vector3(xe * AU, ze * AU, -ye * AU));
+  }
+
+  return new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: planet.orbitColor, transparent: true, opacity: 0.55 })
+  );
+}
+
+// ==================== 行星球体 ====================
+function buildPlanet(planet, scenePos) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(planet.displayRadius, 32, 32),
+    new THREE.MeshStandardMaterial({ color: planet.color, roughness: 0.7, metalness: 0.1 })
+  );
+  mesh.position.copy(scenePos);
+  scene.add(mesh);
+  return mesh;
+}
+
+// ==================== 行星标签 ====================
+function buildLabel(planet, scenePos) {
+  const ctn = document.getElementById('labels-container');
+  const div = document.createElement('div');
+  div.className = 'planet-label';
+  const hex = '#' + planet.color.toString(16).padStart(6, '0');
+  const auDist = planet.a.toFixed(2);
+  div.innerHTML = `<div class="pname" style="color:${hex}">${planet.name}</div><div class="au">${auDist} AU</div>`;
+  ctn.appendChild(div);
+  const offsetPos = scenePos.clone();
+  offsetPos.y += planet.displayRadius + 0.6;
+  labelData.push({ el: div, pos: offsetPos });
+}
+
+// ==================== 构建 ====================
+for (const p of PLANETS) {
+  scene.add(buildOrbitLine(p));
+  const ecl = eclipticPos(p, j2000Days);
+  const pos = toScene(ecl);
+  buildPlanet(p, pos);
+  buildLabel(p, pos);
+}
+
+// 日期显示
+const now = new Date();
+document.getElementById('dateInfo').textContent =
+  `行星位置: ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+// ==================== 标签投影更新 ====================
+function updateLabels() {
+  const w = window.innerWidth, h = window.innerHeight;
+  for (const { el, pos } of labelData) {
+    const p = pos.clone().project(camera);
+    if (p.z > 1) { el.style.display = 'none'; continue; }
+    el.style.display = '';
+    el.style.left = ((p.x * 0.5 + 0.5) * w) + 'px';
+    el.style.top  = ((-p.y * 0.5 + 0.5) * h) + 'px';
+  }
+}
+
+// ==================== 交互 ====================
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    camera.position.copy(DEFAULT_CAM);
+    controls.target.copy(DEFAULT_TARGET);
+  }
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ==================== 渲染 ====================
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  updateLabels();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
