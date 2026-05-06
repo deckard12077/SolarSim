@@ -23,15 +23,6 @@ canvas { display: block; }
 #info .key { color: #8ab4f8; }
 #info .date { color: #aaa; font-size: 11px; margin-top: 6px; }
 
-.planet-label {
-  position: absolute; pointer-events: none; white-space: nowrap;
-  text-shadow: 0 0 6px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,0.8);
-  transform: translate(-50%, -100%); padding-bottom: 4px;
-  text-align: center; line-height: 1.35;
-}
-.planet-label .pname { font-size: 12px; font-weight: bold; }
-.planet-label .au { color: #999; font-size: 10px; }
-
 .au-label {
   position: absolute; color: #333355; font-size: 10px;
   pointer-events: none; transform: translate(4px, -50%);
@@ -201,7 +192,7 @@ scene.add(new THREE.AmbientLight(0x222244, 0.6));
 (function() {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(
-    new THREE.SphereGeometry(1.5, 32, 32),
+    new THREE.SphereGeometry(0.8, 32, 32),
     new THREE.MeshBasicMaterial({ color: 0xffdd44 })
   ));
   const c = document.createElement('canvas');
@@ -219,7 +210,7 @@ scene.add(new THREE.AmbientLight(0x222244, 0.6));
     transparent: true, blending: THREE.AdditiveBlending,
     opacity: 0.4, depthWrite: false
   }));
-  glow.scale.set(14, 14, 1);
+  glow.scale.set(8, 8, 1);
   g.add(glow);
   scene.add(g);
 })();
@@ -299,20 +290,6 @@ function buildPlanet(planet, scenePos) {
   return mesh;
 }
 
-// ==================== 行星标签 ====================
-function buildLabel(planet, scenePos) {
-  const ctn = document.getElementById('labels-container');
-  const div = document.createElement('div');
-  div.className = 'planet-label';
-  const hex = '#' + planet.color.toString(16).padStart(6, '0');
-  const auDist = planet.a.toFixed(2);
-  div.innerHTML = `<div class="pname" style="color:${hex}">${planet.name}</div><div class="au">${auDist} AU</div>`;
-  ctn.appendChild(div);
-  const offsetPos = scenePos.clone();
-  offsetPos.y += planet.displayRadius + 0.6;
-  labelData.push({ el: div, pos: offsetPos });
-}
-
 // ==================== 构建 ====================
 const orbitLines = [];
 for (const p of PLANETS) {
@@ -322,7 +299,6 @@ for (const p of PLANETS) {
   const ecl = eclipticPos(p, j2000Days);
   const pos = toScene(ecl);
   buildPlanet(p, pos);
-  buildLabel(p, pos);
 }
 
 // 日期显示
